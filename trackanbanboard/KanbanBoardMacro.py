@@ -2,10 +2,10 @@ import os.path
 
 from trac.core import implements
 from trac.wiki.macros import WikiMacroBase
-from trac.web.chrome import ITemplateProvider, add_stylesheet, Chrome, Markup, add_script, tag
+from trac.web.chrome import ITemplateProvider, Chrome, add_stylesheet, add_script
 
 class KanbanBoardMacro(WikiMacroBase):
-    """Kanban board into the wiki page."""
+    """Insert Kanban board into the wiki page."""
 
     implements(ITemplateProvider)
 
