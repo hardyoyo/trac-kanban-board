@@ -1,1 +1,1 @@
-from KanbanBoardMacro import *
+from kanbanboardmacro import *
