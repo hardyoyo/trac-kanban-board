@@ -6,11 +6,24 @@ kanban.Ticket = function(data) {
     this.id = data.id;
     this.summary = ko.observable(data.summary);
     this.status = ko.observable(data.status);
+    this.priority = data.priority;
+    this.type = data.type;
     this.href = data.href;
     this.modified = false;
+    this.title = ko.computed(function() {
+        return 'Ticket #' + self.id;
+    });
 
     this.setModified = function(modified) {
         self.modified = modified;
+    }
+
+    this.viewDetails = function(ticket, event) {
+        kanban.rootModel.pickedTicket(ticket);
+        kanban.ticketDialog = $('#ticketDialog').dialog({
+            modal: true,
+            title: ticket.title()
+        });
     }
 };
 
@@ -24,6 +37,7 @@ kanban.Ticket.prototype.toJSON = function() {
     }
     var copy = ko.toJS(this);
     delete copy.modified;
+    delete copy.title;
     return copy;
 };
 
@@ -42,6 +56,7 @@ kanban.Board = function(columns) {
     console.log('new Board');
     var self = this;
     this.columns = ko.observableArray($.map(columns, function(i) { return new kanban.Column(i); }));
+    this.pickedTicket = ko.observable();
 
     this.columnWidth = ko.computed(function() {
         return Math.floor(100 / self.columns().length) + '%';
@@ -73,12 +88,10 @@ kanban.Board = function(columns) {
     this.getColumn = function(id) {
         var cols = self.columns();
         for (var i in cols) {
-            if (cols[i].id == id) {
-                return cols[i]
-            }
+            if (cols[i].id == id) return cols[i];
         }
         return null;
-    }
+    };
 };
 
 kanban.request = function(url, type, reqData, onSuccess, onError) {

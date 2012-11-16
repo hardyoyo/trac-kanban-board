@@ -12,12 +12,20 @@
                     <span data-bind="text: wip">wip</span>
                 </div>
                 <ul class="card-list" data-bind="sortable: { data: tickets }">
-                    <li class="kanban-card">
-                        <a data-bind="text: id, attr: {href: href}">id</a>
+                    <li class="kanban-card" data-bind="click: viewDetails">
+                        <span data-bind="text: id">id</span>
                         <span data-bind="text: summary">summary</span>
                     </li>
                 </ul>
             </li>
         </ul>
+    </div>
+    <div id="ticketDialog" data-bind="with: pickedTicket">
+        <table class="ticket-table">
+            <tr><td>Summary</td><td><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td></tr>
+            <tr><td>Priority</td><td data-bind="text: priority">priority</td></tr>
+            <tr><td>Type</td><td data-bind="text: type">type</td></tr>
+            <tr><td>Status</td><td data-bind="text: status">status</td></tr>
+        </table>
     </div>
 </div>

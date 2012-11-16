@@ -61,3 +61,19 @@ li.kanban-card a.ticket-link
 {
     margin-right: 0.5em;
 }
+
+#ticketDialog .ticket-table
+{
+    width: 95%;
+}
+
+#ticketDialog .ticket-table td:first-child
+{
+    color: #666666;
+    padding-right: 0.5em;
+}
+
+#ticketDialog .ticket-table input
+{
+    width: 100%;
+}

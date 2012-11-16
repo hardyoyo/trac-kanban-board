@@ -308,6 +308,7 @@ class KanbanBoardMacro(WikiMacroBase):
         add_script(formatter.req, 'kbm/js/libs/knockout-sortable.min.js')
         add_script(formatter.req, 'kbm/js/kanbanboard.js')
         add_script_data(formatter.req, jsGlobals)
+        add_stylesheet(formatter.req, 'kbm/css/jquery-ui-1.9.1.custom.min.css')
         add_stylesheet(formatter.req, 'kbm/css/kanbanboard.css')
 
         return Chrome(self.env).render_template(formatter.req,
