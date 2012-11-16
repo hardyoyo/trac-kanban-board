@@ -6,7 +6,7 @@ import time
 
 import trac.ticket.model as model
 
-from trac.core import implements
+from trac.core import implements, TracError
 from trac.ticket.query import Query
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
@@ -89,7 +89,10 @@ class KanbanBoard:
 
         if last > 0:
             page.text = '\n'.join(newLines)
-            page.save(req.authname, 'Kanban board data changed', req.remote_addr)
+            try:
+                page.save(req.authname, 'Kanban board data changed', req.remote_addr)
+            except TracError as e:
+                self.log.debug('TracError: "%s"' % e.message)
 
     def get_status_to_column_map(self, columns):
         map = {}
@@ -137,6 +140,7 @@ class KanbanBoard:
         else:
             result = json.dumps(self.columns, sort_keys=True, indent=2)
 
+        self.log.debug('KanbanBoard::get_json: %s' % result)
         return result
 
     def get_ticket_query_string(self):
@@ -178,7 +182,9 @@ class KanbanBoard:
                     colId = self.statusMap[ticket['status']]
                     if colId is not col['id']:
                         modified = True
-                    ticketIds[str(colId)].insert(0, tid)
+                        ticketIds[str(colId)].insert(0, tid)
+                    else:
+                        ticketIds[str(colId)].append(tid)
 
         for col in self.columns:
             col['tickets'] = ticketIds[str(col['id'])]
