@@ -98,6 +98,11 @@ kanban.onDataFetched = function(data) {
     kanban.rootModel = new kanban.Board(data);
     ko.bindingHandlers.sortable.isEnabled = IS_EDITABLE;
     ko.bindingHandlers.sortable.afterMove = kanban.rootModel.afterMove;
+    ko.bindingHandlers.sortable.options = {
+        placeholder: 'kanban-card-placeholder',
+        forcePlaceholderSize: true,
+        opacity: 0.5
+    };
     ko.applyBindings(kanban.rootModel);
 };
 
