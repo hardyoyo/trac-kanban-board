@@ -13,7 +13,7 @@ setup(
     url='',
     license='',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-    package_data={'trackanbanboard': ['templates/*.html', 'htdocs/css/*.css', 'htdocs/js/*.js']},
+    package_data={'trackanbanboard': ['templates/*.html', 'htdocs/css/*.css', 'htdocs/js/*.js', 'htdocs/js/libs/*.js']},
     include_package_data=True,
     zip_safe=False,
     install_requires=[

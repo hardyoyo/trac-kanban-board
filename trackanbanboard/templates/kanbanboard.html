@@ -1,6 +1,23 @@
 <div class="$css_class"
      xmlns:py="http://genshi.edgewall.org/"
      xmlns:xi="http://www.w3.org/2001/XInclude">
-    <div class="title">$title</div>
-    <div class="board"></div>
+    <div class="board-title">$title</div>
+    <div class="board-container" style="height: $height;">
+
+        <ul class="kanban-column-container" data-bind="foreach: columns">
+            <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
+                <div>
+                    <span data-bind="text: name">name</span>
+                    <span>&ndash;</span>
+                    <span data-bind="text: wip">wip</span>
+                </div>
+                <ul class="card-list" data-bind="sortable: { data: tickets }">
+                    <li class="kanban-card">
+                        <a data-bind="text: id, attr: {href: href}">id</a>
+                        <span data-bind="text: summary">summary</span>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
 </div>

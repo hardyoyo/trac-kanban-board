@@ -1,4 +1,63 @@
-div.title
+.board-title
 {
     font-size: 1.5em;
+}
+
+.board-container
+{
+}
+
+.kanban-column-container
+{
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.kanban-column-container li.kanban-column
+{
+    display: inline-block;
+    float: left;
+    text-align: center;
+    height: 100%;
+    background-color: #f6f6f6;
+}
+
+.kanban-column-container li.kanban-column:nth-child(odd)
+{
+    background-color: #eee;
+}
+
+ul.card-list
+{
+    list-style: none;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+li.kanban-card
+{
+    background-color: rgb(255, 247, 174);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    margin: 0.5em;
+    padding: 0.5em;
+    text-align: left;
+    border-radius: 0.2em;
+    box-shadow: 1px 3px 10px 0px rgba(0, 0, 0, 0.5);
+}
+
+.kanban-card-placeholder
+{
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 0.5em;
+    border: 1px dashed #888888;
+    border-radius: 0.2em;
+}
+
+li.kanban-card a.ticket-link
+{
+    margin-right: 0.5em;
 }
