@@ -8,12 +8,12 @@
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
                     <span data-bind="text: name">name</span>
-                    <span>&ndash;</span>
+                    <span>&ndash;&nbsp;wip:</span>
                     <span data-bind="text: wip">wip</span>
                 </div>
                 <ul class="card-list" data-bind="sortable: { data: tickets }">
                     <li class="kanban-card" data-bind="click: viewDetails">
-                        <span data-bind="text: id">id</span>
+                        <span class="id-label" data-bind="text: idString">id</span>
                         <span data-bind="text: summary">summary</span>
                     </li>
                 </ul>

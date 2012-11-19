@@ -12,15 +12,15 @@ kanban.Ticket = function(data) {
     this.time = kanbanutil.timestampToDate(data.time);
     this.changetime = ko.observable(kanbanutil.timestampToDate(data.changetime));
     this.modified = false;
-    this.title = ko.computed(function() {
-        return 'Ticket #' + self.id;
+    this.idString = ko.computed(function() {
+        return '#' + self.id;
     });
 
     this.viewDetails = function(ticket, event) {
         kanban.rootModel.pickedTicket(ticket);
         kanban.ticketDialog = $('#ticketDialog').dialog({
             modal: true,
-            title: ticket.title(),
+            title: 'Ticket ' + ticket.idString(),
             minWidth: 400
         });
     }
@@ -38,7 +38,7 @@ kanban.Ticket.prototype.toJSON = function() {
     delete copy.time;
     delete copy.changetime;
     delete copy.modified;
-    delete copy.title;
+    delete copy.idString;
     return copy;
 };
 

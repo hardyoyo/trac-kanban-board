@@ -58,6 +58,11 @@ li.kanban-card
     border-radius: 0.2em;
 }
 
+li.kanban-card .id-label
+{
+    color: #cd0a0a;
+}
+
 #ticketDialog .ticket-table
 {
     width: 95%;
