@@ -293,7 +293,6 @@ class KanbanBoardMacro(WikiMacroBase):
         isEditable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
 
         data = {
-            'title': 'Kanban board',
             'css_class': 'trac-kanban-board-macro',
             'height': boardHeight
         }

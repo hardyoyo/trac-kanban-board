@@ -1,9 +1,7 @@
 <div class="$css_class"
      xmlns:py="http://genshi.edgewall.org/"
      xmlns:xi="http://www.w3.org/2001/XInclude">
-    <div class="board-title">$title</div>
     <div class="board-container" style="height: $height;">
-
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
