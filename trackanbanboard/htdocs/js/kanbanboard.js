@@ -9,20 +9,19 @@ kanban.Ticket = function(data) {
     this.priority = data.priority;
     this.type = data.type;
     this.href = data.href;
+    this.time = kanbanutil.timestampToDate(data.time);
+    this.changetime = ko.observable(kanbanutil.timestampToDate(data.changetime));
     this.modified = false;
     this.title = ko.computed(function() {
         return 'Ticket #' + self.id;
     });
 
-    this.setModified = function(modified) {
-        self.modified = modified;
-    }
-
     this.viewDetails = function(ticket, event) {
         kanban.rootModel.pickedTicket(ticket);
         kanban.ticketDialog = $('#ticketDialog').dialog({
             modal: true,
-            title: ticket.title()
+            title: ticket.title(),
+            minWidth: 400
         });
     }
 };
@@ -36,6 +35,8 @@ kanban.Ticket.prototype.toJSON = function() {
         return { id: this.id };
     }
     var copy = ko.toJS(this);
+    delete copy.time;
+    delete copy.changetime;
     delete copy.modified;
     delete copy.title;
     return copy;
@@ -71,7 +72,8 @@ kanban.Board = function(columns) {
         if (arg.sourceParent.id != arg.targetParent.id) {
             // Ticket's new status is the first mapped status of the column
             arg.item.status(targetColumn.states[0]);
-            arg.item.setModified(true);
+            arg.item.modified = true;
+            arg.item.changetime(new Date());
             modifiedColumns.push(targetColumn);
         }
 
@@ -82,7 +84,7 @@ kanban.Board = function(columns) {
             function(data) {console.log("updated");},
             function() {console.log("update error")});
 
-        arg.item.setModified(false);
+        arg.item.modified = false;
     };
 
     this.getColumn = function(id) {
