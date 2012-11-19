@@ -47,6 +47,7 @@ li.kanban-card
     text-align: left;
     border-radius: 0.2em;
     box-shadow: 1px 3px 10px 0px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
 }
 
 .kanban-card-placeholder
@@ -55,11 +56,6 @@ li.kanban-card
     margin: 0.5em;
     border: 1px dashed #888888;
     border-radius: 0.2em;
-}
-
-li.kanban-card a.ticket-link
-{
-    margin-right: 0.5em;
 }
 
 #ticketDialog .ticket-table
