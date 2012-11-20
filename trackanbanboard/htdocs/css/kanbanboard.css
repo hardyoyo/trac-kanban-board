@@ -24,6 +24,11 @@
     background-color: #eee;
 }
 
+.wip-exceeded
+{
+    color: #cd0a0a;
+}
+
 ul.card-list
 {
     list-style: none;

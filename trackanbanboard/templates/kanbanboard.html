@@ -6,8 +6,8 @@
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
                     <span data-bind="text: name">name</span>
-                    <span>&ndash;&nbsp;wip:</span>
-                    <span data-bind="text: wip">wip</span>
+                    <span>&ndash;</span>
+                    <span data-bind="text: tickets().length + '/' + wip(), css: {'wip-exceeded': tickets().length > wip()}">wip</span>
                 </div>
                 <ul class="card-list" data-bind="sortable: { data: tickets }">
                     <li class="kanban-card" data-bind="click: viewDetails">
@@ -20,12 +20,30 @@
     </div>
     <div id="ticketDialog" data-bind="with: pickedTicket">
         <table class="ticket-table">
-            <tr><td>Summary</td><td><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td></tr>
-            <tr><td>Priority</td><td data-bind="text: priority">priority</td></tr>
-            <tr><td>Type</td><td data-bind="text: type">type</td></tr>
-            <tr><td>Status</td><td data-bind="text: status">status</td></tr>
-            <tr><td>Created</td><td data-bind="readableDate: time">time</td></tr>
-            <tr><td>Modified</td><td data-bind="readableDate: changetime">changetime</td></tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('summary')">summary</td>
+                <td><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('priority')">priority</td>
+                <td><select data-bind="options: $$root.ticketFieldOptions['priority'], value: priority, enable: IS_EDITABLE">priority</select></td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('type')">type</td>
+                <td><select data-bind="options: $$root.ticketFieldOptions['type'], value: type, enable: IS_EDITABLE">type</select></td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('status')">status</td>
+                <td data-bind="text: status">status</td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('time')">time</td>
+                <td data-bind="readableDate: time">time</td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('changetime')">changetime</td>
+                <td data-bind="readableDate: changetime">changetime</td>
+            </tr>
         </table>
     </div>
 </div>

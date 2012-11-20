@@ -2,11 +2,12 @@ import copy
 import json
 import os.path
 import re
-import time
+import calendar
 
 import trac.ticket.model as model
 
 from trac.core import implements, TracError
+from trac.ticket.api import TicketSystem
 from trac.ticket.query import Query
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
@@ -14,7 +15,7 @@ from trac.web import IRequestHandler
 from trac.web.chrome import ITemplateProvider, Chrome, add_stylesheet, add_script, add_script_data
 from trac.wiki.model import WikiPage
 
-REQ_REGEXP = re.compile('\/kanbanboard\/(?P<bid>\w+)')
+REQ_REGEXP = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
 class KanbanBoard:
     dataStartRe = re.compile('(?P<start><(textarea|TEXTAREA)[^>]+(id|ID)=["\']kanbanBoardData["\'][^>]*>)')
@@ -117,8 +118,8 @@ class KanbanBoard:
         for t in ticketList:
             idStr = str(t['id'])
             tickets[idStr] = t
-            tickets[idStr]['time'] = int(time.mktime(t['time'].timetuple()))
-            tickets[idStr]['changetime'] = int(time.mktime(t['changetime'].timetuple()))
+            tickets[idStr]['time'] = int(calendar.timegm(t['time'].timetuple()))
+            tickets[idStr]['changetime'] = int(calendar.timegm(t['changetime'].timetuple()))
 
         return tickets
 
@@ -159,11 +160,16 @@ class KanbanBoard:
     def update_column(self, newColumn):
         self.log.debug('KanbanBoard::update_column: %d' % newColumn['id'])
         self.log.debug(newColumn)
+
+        if 'tickets' in newColumn:
+            # convert ticket list to list of integers (ticket IDs)
+            newColumn['tickets'] = map(lambda x: x['id'], newColumn['tickets'])
+
         for index, column in enumerate(self.columns):
             if column['id'] == newColumn['id']:
-                self.columns[index] = newColumn
-                # convert ticket list to list of integers (ticket IDs)
-                self.columns[index]['tickets'] = map(lambda x: x['id'], newColumn['tickets'])
+                for key, value in newColumn.items():
+                    if key != 'id':
+                        self.columns[index][key] = value
 
     def fix_ticket_columns(self, request, saveChanges):
         """Iterate through all tickets on board and check that ticket state matches column states.
@@ -180,7 +186,7 @@ class KanbanBoard:
                 if (str(tid) in self.tickets):
                     ticket = self.tickets[str(tid)]
                     colId = self.statusMap[ticket['status']]
-                    if colId is not col['id']:
+                    if colId != col['id']:
                         modified = True
                         ticketIds[str(colId)].insert(0, tid)
                     else:
@@ -228,28 +234,34 @@ class KanbanBoardMacro(WikiMacroBase):
     def save_ticket(self, ticketData, author, comment=''):
         self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticketData['id'], author))
         ticket = model.Ticket(self.env, ticketData['id'])
-        if ticket['status'] is not ticketData['status']:
-            ticket['status'] = ticketData['status']
+        for key, value in ticketData.items():
+            if key != 'id':
+                ticket[key] = value
         ticket.save_changes(author, comment)
 
     def match_request(self, req):
         return REQ_REGEXP.match(req.path_info)
 
-    # GET  /kanbanboard/[board ID]/ returns board data
+    # GET  /kanbanboard/ returns metadata (ticket fields etc.)
+    # GET  /kanbanboard/[board ID]/ returns board and ticket data
     # POST /kanbanboard/[board ID]/ updates board data and saves ticket changes
+
     def process_request(self, req):
         self.log.debug('=== HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
 
         if req.method != 'GET' and req.method != 'POST':
             return req.send([], content_type='application/json')
 
-        boardId = 0
+        boardId = None
         match = REQ_REGEXP.match(req.path_info)
         if match:
             boardId = match.group('bid')
 
-        if boardId == 0:
-            return req.send([], content_type='application/json')
+        if boardId is None:
+            self.log.debug('=== Get metadata')
+            metaData = {}
+            metaData['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
+            return req.send(json.dumps(metaData), content_type='application/json')
 
         board = KanbanBoard(boardId, req, self.env, self.log)
 
@@ -266,8 +278,10 @@ class KanbanBoardMacro(WikiMacroBase):
             columnData = json.loads(req.read())
             for col in columnData:
                 for ticket in col['tickets']:
-                    if 'status' in ticket:
-                        self.save_ticket(ticket, req.authname)
+                    for key, value in ticket.items():
+                        if key != 'id':
+                            self.save_ticket(ticket, req.authname)
+                            break
 
                 board.update_column(col)
             board.save_wiki_data(req)
@@ -302,8 +316,10 @@ class KanbanBoardMacro(WikiMacroBase):
             'IS_EDITABLE': isEditable
         }
 
+        add_script(formatter.req, 'kbm/js/libs/jquery-1.8.2.js')
         add_script(formatter.req, 'kbm/js/libs/jquery-ui-1.9.1.custom.min.js')
         add_script(formatter.req, 'kbm/js/libs/knockout-2.2.0.js')
+        add_script(formatter.req, 'kbm/js/libs/knockout.mapping.js')
         add_script(formatter.req, 'kbm/js/libs/knockout-sortable.min.js')
         add_script(formatter.req, 'kbm/js/kanbanutil.js')
         add_script(formatter.req, 'kbm/js/kanbanboard.js')
