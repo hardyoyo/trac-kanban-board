@@ -2,13 +2,13 @@ import copy
 import json
 import os.path
 import re
-import calendar
 
 import trac.ticket.model as model
 
 from trac.core import implements, TracError
 from trac.ticket.api import TicketSystem
 from trac.ticket.query import Query
+from trac.util.datefmt import to_timestamp
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
 from trac.web import IRequestHandler
@@ -114,12 +114,12 @@ class KanbanBoard:
         ticketList = query.execute(req)
         tickets = {}
 
-        # convert times to epoch timestamps
+        # convert datetimes to POSIX timestamps
         for t in ticketList:
             idStr = str(t['id'])
             tickets[idStr] = t
-            tickets[idStr]['time'] = int(calendar.timegm(t['time'].timetuple()))
-            tickets[idStr]['changetime'] = int(calendar.timegm(t['changetime'].timetuple()))
+            tickets[idStr]['time'] = to_timestamp(t['time'])
+            tickets[idStr]['changetime'] = to_timestamp(t['changetime'])
 
         return tickets
 
