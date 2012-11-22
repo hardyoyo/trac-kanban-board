@@ -229,7 +229,7 @@ kanban.Board = function(data) {
         kanban.ticketDialog = $dialogDiv.dialog({
             modal: true,
             title: 'Ticket ' + self.dialogTicket().idString,
-            minWidth: 500,
+            minWidth: 600,
             buttons: buttons
         });
     };
