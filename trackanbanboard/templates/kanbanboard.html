@@ -27,7 +27,9 @@
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('status')">status</td>
-                <td data-bind="text: status">status</td>
+                <td>
+                    <select data-bind="options: $$root.ticketFieldOptions['status'], value: status, enable: IS_EDITABLE">status</select>
+                </td>
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('priority')">priority</td>

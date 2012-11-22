@@ -30,10 +30,13 @@ class KanbanBoard:
         self.log = logger
         self.columns = self.load_wiki_data(self.name)['columns']
         self.statusMap = self.get_status_to_column_map(self.columns)
-        self.tickets = self.fetch_tickets(request, detailedTickets)
+        self.tickets = self.fetch_tickets(detailedTickets)
 
     def is_ready(self):
         return self.columns is not None
+
+    def update_tickets(self):
+        self.tickets = self.fetch_tickets([])
 
     def load_wiki_data(self, pageName):
         self.log.debug('KanbanBoard::load_wiki_data: %s' % pageName)
@@ -104,7 +107,7 @@ class KanbanBoard:
 
         return map
 
-    def fetch_tickets(self, req, detailed):
+    def fetch_tickets(self, detailed):
         self.log.debug('KanbanBoard::fetch_tickets')
 
         fields = []
@@ -144,7 +147,10 @@ class KanbanBoard:
         return tickets
 
     def get_json(self, includeTickets):
-        """Return JSON representation of the board."""
+        """Return JSON representation of the board.
+           If 'includeTickets' is True, each column's 'tickets' property contains ticket objects.
+           If False, 'tickets' property is list of ticket IDs.
+        """
         result = ''
         if includeTickets:
             jason = { 'columns': [] }
@@ -191,7 +197,7 @@ class KanbanBoard:
         self.log.debug('KanbanBoard::fix_ticket_columns')
         modified = False
 
-        ticketIds = {}
+        ticketIds = {} # 'columnID': [ticketID, ticketID, ticketID]
         for col in self.columns:
             ticketIds[str(col['id'])] = []
 
@@ -260,7 +266,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
     # GET  /kanbanboard/ returns metadata (ticket fields etc.)
     # GET  /kanbanboard/[board ID]/ returns board and ticket data
-    # POST /kanbanboard/[board ID]/ updates board data and saves ticket changes
+    # POST /kanbanboard/[board ID]/ updates board data and saves ticket changes, returns board & ticket data
 
     def process_request(self, req):
         self.log.debug('=== HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
@@ -312,8 +318,10 @@ class KanbanBoardMacro(WikiMacroBase):
                             break
 
                 board.update_column(col)
-            board.save_wiki_data(req)
-            return req.send([], content_type='application/json')
+
+            board.update_tickets()
+            board.fix_ticket_columns(req, True)
+            return req.send(board.get_json(True), content_type='application/json')
 
     def get_templates_dirs(self):
         from pkg_resources import resource_filename

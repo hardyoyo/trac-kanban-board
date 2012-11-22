@@ -29,6 +29,7 @@ kanban.Ticket = function(data) {
             var dt = kanban.rootModel.dialogTicket();
             if (dt && dt.id == self.id) {
                 console.log('Update dialog ticket');
+                kanban.rootModel.selectedTicket(self);
                 kanban.rootModel.dialogTicket(ko.toJS(self));
             }
         }
@@ -242,15 +243,19 @@ kanban.Board = function(data) {
         var modifiedColumns = [];
         var ticketColumn = self.getTicketColumn(originalTicket.id);
 
-        if (self.dialogTicket().summary != originalTicket.summary) {
+        if (self.dialogTicket().summary != originalTicket.summary()) {
             originalTicket.setField('summary', self.dialogTicket().summary);
             modified = true;
         }
-        if (self.dialogTicket().priority != originalTicket.priority) {
+        if (self.dialogTicket().status != originalTicket.status()) {
+            originalTicket.setField('status', self.dialogTicket().status);
+            modified = true;
+        }
+        if (self.dialogTicket().priority != originalTicket.priority()) {
             originalTicket.setField('priority', self.dialogTicket().priority);
             modified = true;
         }
-        if (self.dialogTicket().type != originalTicket.type) {
+        if (self.dialogTicket().type != originalTicket.type()) {
             originalTicket.setField('type', self.dialogTicket().type);
             modified = true;
         }
@@ -263,7 +268,10 @@ kanban.Board = function(data) {
                 kanban.DATA_URL,
                 'POST',
                 ko.toJSON(modifiedColumns),
-                function(data) {console.log("updated");},
+                function(data) {
+                    console.log("updated", data);
+                    self.updateData(data);
+                },
                 function() {console.log("update error")});
 
             originalTicket.modifiedFields = [];
