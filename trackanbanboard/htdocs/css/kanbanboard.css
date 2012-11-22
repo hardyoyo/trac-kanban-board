@@ -29,6 +29,13 @@
     color: #cd0a0a;
 }
 
+.date-time
+{
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
 ul.card-list
 {
     list-style: none;
@@ -66,15 +73,22 @@ li.kanban-card .id-label
 #ticketDialog .ticket-table
 {
     width: 95%;
+    border-collapse: collapse;
 }
 
-#ticketDialog .ticket-table td:first-child
+#ticketDialog .ticket-table td:nth-child(odd)
 {
     color: #666666;
+    background-color: #eee;
     padding-right: 0.5em;
 }
 
 #ticketDialog .ticket-table input
 {
     width: 100%;
+}
+
+#logTitle {
+    cursor: pointer;
+    font-size: 1.2em;
 }

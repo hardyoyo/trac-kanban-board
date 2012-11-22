@@ -1,17 +1,11 @@
 var kanban = kanban || {};
 
 kanban.Ticket = function(data) {
-    console.log('new Ticket ' + data.id);
+    console.log('new Ticket', data.id);
     var self = this;
 
     ko.mapping.fromJS(data, {
-        copy: ['id'],
-        'time': {
-            create: function(options) { return kanbanutil.timestampToDate(options.data); }
-        },
-        'changetime': {
-            create: function(options) { return ko.observable(kanbanutil.timestampToDate(options.data)); }
-        }
+        copy: ['id']
     }, this);
 
     this.idString = ko.computed(function() {
@@ -20,30 +14,20 @@ kanban.Ticket = function(data) {
 
     this.modifiedFields = [];
     this.setField = function(fieldName, value) {
-        self[fieldName] = value;
+        self[fieldName](value);
         self.modifiedFields.push(fieldName);
-        self.changetime(new Date());
+        self.changetime(new Date().getTime());
     };
 
-    /* Show ticket details in a dialog window. */
-    this.viewDetails = function(ticket, event) {
-        kanban.rootModel.pickedTicket(ko.toJS(ticket));
-        var buttons = {};
-        if (IS_EDITABLE) {
-            buttons['Save'] = function() {
-                kanban.rootModel.savePickedTicket(ticket);
-                $(this).dialog("close");
-            }
-        }
-        buttons['Cancel'] = function() { $(this).dialog("close"); };
+    this.updateData = function(data) {
+        console.log('Update ticket', data.id, data);
+        ko.mapping.fromJS(data, self);
 
-        kanban.ticketDialog = $('#ticketDialog').dialog({
-            modal: true,
-            title: 'Ticket ' + ticket.idString(),
-            minWidth: 500,
-            buttons: buttons
-        });
-    }
+        if (kanban.rootModel && kanban.rootModel.dialogTicket().id == self.id) {
+            console.log('Update dialog ticket');
+            kanban.rootModel.dialogTicket(ko.toJS(self));
+        }
+    };
 
     console.log(this);
 };
@@ -61,19 +45,28 @@ kanban.Ticket.prototype.toJSON = function() {
 };
 
 kanban.Column = function(data) {
-    console.log('new Column ' + data.id);
+    console.log('new Column', data.id);
     var self = this;
 
     ko.mapping.fromJS(data, {
         copy: ['id', 'states'],
         'tickets': {
-            key: function(data) { return ko.utils.unwrapObservable(data.id); },
-            create: function(options) { return new kanban.Ticket(options.data); }
+            key: function(ticketData) { return ko.utils.unwrapObservable(ticketData.id); },
+            create: function(options) { return new kanban.Ticket(options.data); },
+            update: function(options) {
+                options.target.updateData(options.data);
+                return options.target;
+            }
         }
     }, this);
 
     this.tickets.id = data.id; // needed in sortable.afterMove function to find out source and target columns
     this.modifiedFields = [];
+
+    this.updateData = function(data) {
+        console.log('Update column', data.id, data);
+        ko.mapping.fromJS(data, self);
+    };
 
     console.log(this);
 };
@@ -90,16 +83,30 @@ kanban.Column.prototype.toJSON = function() {
     return obj;
 };
 
-kanban.Board = function(columns) {
+kanban.Board = function(data) {
     console.log('new Board');
     var self = this;
-    this.columns = ko.observableArray($.map(columns, function(i) { return new kanban.Column(i); }));
 
-    /* An observable holding copy of clicked ticket's data. */
-    this.pickedTicket = ko.observable();
+    this.mapping = {
+        'columns': {
+            key: function(coldata) { return ko.utils.unwrapObservable(coldata.id); },
+            create: function(options) { return new kanban.Column(options.data); },
+            update: function(options) {
+                options.target.updateData(options.data);
+                return options.target;
+            }
+        }
+    };
+
+    ko.mapping.fromJS(data, this.mapping, this);
+
+    /* The ticket clicked by user. */
+    this.selectedTicket = ko.observable(null);
+    /* The ticket displayed in ticket detail dialog. This is initially copy of selected ticket. */
+    this.dialogTicket = ko.observable(null);
 
     /* Accepted values for various ticket fields. Keys are field names and values are observable arrays of strings.
-       For example 'type': ko.observableArray(['defect, 'enhancement', 'task']) */
+       For example: { 'type': ko.observableArray(['defect, 'enhancement', 'task']) }*/
     this.ticketFieldOptions = {};
 
     this.setTicketFieldOptions = function(fieldName, options) {
@@ -170,25 +177,78 @@ kanban.Board = function(columns) {
         return "ERROR";
     };
 
-    /* Check if picked ticket has changed from original ticket and save changes if necessary */
-    this.savePickedTicket = function(originalTicket) {
-        console.log('Save ticket:', self.pickedTicket(), originalTicket);
+    this.updateData = function(data) {
+        console.log('Update board', data);
+        ko.mapping.fromJS(data, self);
+    };
+
+    this.selectTicket = function(ticket) {
+        console.log('selectTicket:', ticket);
+        self.selectedTicket(ticket);
+        /* Use copy of selected ticket in dialog so that original ticket doesn't change before Save is clicked. */
+        self.dialogTicket(ko.toJS(ticket));
+        self.showTicketDialog();
+        self.fetchData([ ticket.id ]);
+    };
+
+    /* Fetch board data from backend. Data includes all columns and all tickets. By default ticket data includes
+        only id, summary and status fields. For tickets specified in detailedTickets argument, all fields are included. */
+    this.fetchData = function(detailedTickets) {
+        console.log('fetchData:', detailedTickets, typeof detailedTickets);
+        var args = '';
+        if (detailedTickets && Object.prototype.toString.call(detailedTickets) === '[object Array]') {
+            args = '?tickets=' + detailedTickets.join(',');
+        }
+        var url = kanban.DATA_URL + args;
+        kanban.request(
+            url,
+            'GET',
+            null,
+            self.updateData,
+            function() {
+                console.error('Failed to fetch board data');
+            });
+    };
+
+    this.showTicketDialog = function() {
+        console.log('showTicketDialog');
+        var buttons = {};
+        if (IS_EDITABLE) {
+            buttons['Save'] = function() {
+                self.saveDialogTicket(self.selectedTicket());
+                $(this).dialog("close");
+            }
+        }
+        buttons['Cancel'] = function() { $(this).dialog("close"); };
+
+        var $dialogDiv = $('#ticketDialog');
+        kanban.ticketDialog = $dialogDiv.dialog({
+            modal: true,
+            title: 'Ticket ' + self.dialogTicket().idString,
+            minWidth: 500,
+            buttons: buttons
+        });
+    };
+
+    /* Check if dialog ticket has changed from original ticket and save changes if necessary */
+    this.saveDialogTicket = function(originalTicket) {
+        console.log('Save ticket:', self.dialogTicket(), originalTicket);
         // TODO: If ticket status changed, move it to correct column
 
         var modified = false;
         var modifiedColumns = [];
         var ticketColumn = self.getTicketColumn(originalTicket.id);
 
-        if (self.pickedTicket().summary != originalTicket.summary()) {
-            originalTicket.setField('summary', self.pickedTicket().summary);
+        if (self.dialogTicket().summary != originalTicket.summary) {
+            originalTicket.setField('summary', self.dialogTicket().summary);
             modified = true;
         }
-        if (self.pickedTicket().priority != originalTicket.priority()) {
-            originalTicket.setField('priority', self.pickedTicket().priority);
+        if (self.dialogTicket().priority != originalTicket.priority) {
+            originalTicket.setField('priority', self.dialogTicket().priority);
             modified = true;
         }
-        if (self.pickedTicket().type != originalTicket.type()) {
-            originalTicket.setField('type', self.pickedTicket().type);
+        if (self.dialogTicket().type != originalTicket.type) {
+            originalTicket.setField('type', self.dialogTicket().type);
             modified = true;
         }
 
@@ -209,6 +269,7 @@ kanban.Board = function(columns) {
             }
         }
     };
+
 };
 
 kanban.request = function(url, type, reqData, onSuccess, onError) {

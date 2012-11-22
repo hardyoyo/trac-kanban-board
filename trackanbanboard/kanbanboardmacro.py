@@ -12,6 +12,7 @@ from trac.util.datefmt import to_timestamp
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
 from trac.web import IRequestHandler
+from trac.web.api import parse_arg_list
 from trac.web.chrome import ITemplateProvider, Chrome, add_stylesheet, add_script, add_script_data
 from trac.wiki.model import WikiPage
 
@@ -23,13 +24,13 @@ class KanbanBoard:
     dataStartTag = '<textarea id="kanbanBoardData">'
     dataEndTag = '</textarea>'
 
-    def __init__(self, name, request, env, logger):
+    def __init__(self, name, detailedTickets, request, env, logger):
         self.name = name
         self.env = env
         self.log = logger
-        self.columns = self.load_wiki_data(self.name)
+        self.columns = self.load_wiki_data(self.name)['columns']
         self.statusMap = self.get_status_to_column_map(self.columns)
-        self.tickets = self.fetch_tickets(request)
+        self.tickets = self.fetch_tickets(request, detailedTickets)
 
     def is_ready(self):
         return self.columns is not None
@@ -103,23 +104,42 @@ class KanbanBoard:
 
         return map
 
-    def fetch_tickets(self, req):
+    def fetch_tickets(self, req, detailed):
         self.log.debug('KanbanBoard::fetch_tickets')
-        queryString = self.get_ticket_query_string()
-        self.log.debug('query string: %s' % queryString)
-        if queryString == "":
-            return []
 
-        query = Query.from_string(self.env, queryString)
-        ticketList = query.execute(req)
+        fields = []
+        if len(detailed) > 0:
+            fields = TicketSystem(self.env).get_ticket_fields()
+
         tickets = {}
+        ids = self.get_ticket_ids()
+        for id in ids:
+            t = { 'id': id }
+            ticket = model.Ticket(self.env, id)
 
-        # convert datetimes to POSIX timestamps
-        for t in ticketList:
-            idStr = str(t['id'])
-            tickets[idStr] = t
-            tickets[idStr]['time'] = to_timestamp(t['time'])
-            tickets[idStr]['changetime'] = to_timestamp(t['changetime'])
+            if id in detailed:
+                for field in fields:
+                    t[field['name']] = ticket.get_value_or_default(field['name'])
+
+                t['time'] = to_timestamp(ticket['time']) * 1000
+                t['changetime'] = to_timestamp(ticket['changetime']) * 1000
+
+                t['changelog'] = []
+                changelog = ticket.get_changelog()
+                for logItem in changelog:
+                    item = {}
+                    item['time'] = to_timestamp(logItem[0]) * 1000
+                    item['author'] = logItem[1]
+                    item['field'] = logItem[2]
+                    item['oldValue'] = logItem[3]
+                    item['newValue'] = logItem[4]
+                    item['permanent'] = logItem[5]
+                    t['changelog'].append(item)
+            else:
+                t['summary'] = ticket.get_value_or_default('summary')
+                t['status'] = ticket.get_value_or_default('status')
+
+            tickets[str(id)] = t
 
         return tickets
 
@@ -127,7 +147,7 @@ class KanbanBoard:
         """Return JSON representation of the board."""
         result = ''
         if includeTickets:
-            jason = []
+            jason = { 'columns': [] }
             for col in self.columns:
                 colcopy = copy.deepcopy(col)
                 colcopy['tickets'] = []
@@ -136,19 +156,13 @@ class KanbanBoard:
                         colcopy['tickets'].append(self.tickets[str(t)])
                     except KeyError:
                         pass
-                jason.append(colcopy)
+                jason['columns'].append(colcopy)
             result = json.dumps(jason)
         else:
-            result = json.dumps(self.columns, sort_keys=True, indent=2)
+            result = json.dumps({ 'columns': self.columns }, sort_keys=True, indent=2)
 
         self.log.debug('KanbanBoard::get_json: %s' % result)
         return result
-
-    def get_ticket_query_string(self):
-        """Return Trac query string which can be used to fetch all tickets on the board."""
-        ids = self.get_ticket_ids()
-        queryString = '&'.join(('id=' + str(x)) for x in ids)
-        return queryString
 
     def get_ticket_ids(self):
         """Return ids of all tickets currently on the board."""
@@ -211,11 +225,13 @@ class KanbanBoardMacro(WikiMacroBase):
     {{{
         #!html
         <textarea id="kanbanBoardData" style="display: none;">
-        [
+        {
+          "columns": [
             { "id": 1, "name": "New", "states": ["new"], "tickets": [100, 124, 103], "wip": 5 },
             { "id": 2, "name": "Ongoing", "states": ["assigned, accepted, reopened"], "tickets": [], "wip": 3 },
             { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
-        ]
+          ]
+        }
         </textarea>
     }}}
     }}}
@@ -263,7 +279,19 @@ class KanbanBoardMacro(WikiMacroBase):
             metaData['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
             return req.send(json.dumps(metaData), content_type='application/json')
 
-        board = KanbanBoard(boardId, req, self.env, self.log)
+        argList = parse_arg_list(req.query_string)
+        detailedTickets = []
+        for arg in argList:
+            if arg[0] == 'tickets':
+                ids = arg[1].split(',')
+                for id in ids:
+                    try:
+                        detailedTickets.append(int(id))
+                    except ValueError:
+                        pass
+        self.log.debug(detailedTickets)
+
+        board = KanbanBoard(boardId, detailedTickets, req, self.env, self.log)
 
         # We need to update board data to match (possibly changed) ticket states
         isEditable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm

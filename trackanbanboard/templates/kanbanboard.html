@@ -2,6 +2,7 @@
      xmlns:py="http://genshi.edgewall.org/"
      xmlns:xi="http://www.w3.org/2001/XInclude">
     <div class="board-container" style="height: $height;">
+        <button data-bind="click: $$root.fetchData">Refresh</button>
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
@@ -10,7 +11,7 @@
                     <span data-bind="text: tickets().length + '/' + wip(), css: {'wip-exceeded': tickets().length > wip()}">wip</span>
                 </div>
                 <ul class="card-list" data-bind="sortable: { data: tickets }">
-                    <li class="kanban-card" data-bind="click: viewDetails">
+                    <li class="kanban-card" data-bind="click: $$root.selectTicket">
                         <span class="id-label" data-bind="text: idString">id</span>
                         <span data-bind="text: summary">summary</span>
                     </li>
@@ -18,32 +19,92 @@
             </li>
         </ul>
     </div>
-    <div id="ticketDialog" data-bind="with: pickedTicket">
+    <div id="ticketDialog" data-bind="with: dialogTicket">
         <table class="ticket-table">
             <tr>
                 <td data-bind="text: $$root.fieldLabel('summary')">summary</td>
-                <td><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('priority')">priority</td>
-                <td><select data-bind="options: $$root.ticketFieldOptions['priority'], value: priority, enable: IS_EDITABLE">priority</select></td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('type')">type</td>
-                <td><select data-bind="options: $$root.ticketFieldOptions['type'], value: type, enable: IS_EDITABLE">type</select></td>
+                <td colspan="3"><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td>
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('status')">status</td>
                 <td data-bind="text: status">status</td>
             </tr>
             <tr>
-                <td data-bind="text: $$root.fieldLabel('time')">time</td>
-                <td data-bind="readableDate: time">time</td>
+                <td data-bind="text: $$root.fieldLabel('priority')">priority</td>
+                <td data-bind="if: $$data.priority">
+                    <select data-bind="options: $$root.ticketFieldOptions['priority'], value: priority, enable: IS_EDITABLE">priority</select>
+                </td>
+                <td data-bind="text: $$root.fieldLabel('type')">type</td>
+                <td data-bind="if: $$data.type">
+                    <select data-bind="options: $$root.ticketFieldOptions['type'], value: type, enable: IS_EDITABLE">type</select>
+                </td>
             </tr>
             <tr>
+                <td data-bind="text: $$root.fieldLabel('time')">time</td>
+                <td  data-bind="if: $$data.time">
+                    <span data-bind="readableDate: time">time</span>
+                </td>
                 <td data-bind="text: $$root.fieldLabel('changetime')">changetime</td>
-                <td data-bind="readableDate: changetime">changetime</td>
+                <td data-bind="if: $$data.changetime">
+                    <span data-bind="readableDate: changetime">changetime</span>
+                </td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('reporter')">reporter</td>
+                <td data-bind="if: $$data.reporter">
+                    <span data-bind="text: reporter">reporter</span>
+                </td>
+                <td data-bind="text: $$root.fieldLabel('owner')">owner</td>
+                <td data-bind="if: $$data.owner">
+                    <span data-bind="text: owner">owner</span>
+                </td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('milestone')">milestone</td>
+                <td data-bind="if: $$data.milestone">
+                    <select data-bind="options: $$root.ticketFieldOptions['milestone'], value: milestone, enable: IS_EDITABLE">milestone</select>
+                </td>
+                <td data-bind="text: $$root.fieldLabel('component')">component</td>
+                <td data-bind="if: $$data.component">
+                    <select data-bind="options: $$root.ticketFieldOptions['component'], value: component, enable: IS_EDITABLE">component</select>
+                </td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('version')">version</td>
+                <td data-bind="if: $$data.version">
+                    <select data-bind="options: $$root.ticketFieldOptions['version'], value: version, enable: IS_EDITABLE">version</select>
+                </td>
+                <td data-bind="text: $$root.fieldLabel('resolution')">resolution</td>
+                <td data-bind="if: $$data.resolution">
+                    <select data-bind="options: $$root.ticketFieldOptions['resolution'], value: resolution, enable: IS_EDITABLE">resolution</select>
+                </td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('keywords')">keywords</td>
+                <td data-bind="if: $$data.keywords">
+                    <span data-bind="text: keywords">keywords</span>
+                </td>
+                <td data-bind="text: $$root.fieldLabel('cc')">cc</td>
+                <td data-bind="if: $$data.cc">
+                    <span data-bind="text: cc">cc</span>
+                </td>
+            </tr>
+            <tr>
+                <td data-bind="text: $$root.fieldLabel('description')">description</td>
+                <td colspan="3" data-bind="if: $$data.description">
+                    <span data-bind="text: description">description</span>
+                </td>
             </tr>
         </table>
+        <div data-bind="if: $$data.changelog">
+            <div id="logTitle" data-bind="click: function() { $('#logList').toggle(); }">Change history</div>
+            <ul id="logList" data-bind="foreach: changelog" style="display: none;">
+                <li>
+                    <span data-bind="readableDate: time">time</span>
+                    <span data-bind="text: author">author</span>
+                    <span data-bind="text: field">field</span>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
