@@ -16,16 +16,21 @@ kanban.Ticket = function(data) {
     this.setField = function(fieldName, value) {
         self[fieldName](value);
         self.modifiedFields.push(fieldName);
-        self.changetime(new Date().getTime());
+        if (self.changetime) {
+            self.changetime(new Date().getTime());
+        }
     };
 
     this.updateData = function(data) {
         console.log('Update ticket', data.id, data);
         ko.mapping.fromJS(data, self);
 
-        if (kanban.rootModel && kanban.rootModel.dialogTicket().id == self.id) {
-            console.log('Update dialog ticket');
-            kanban.rootModel.dialogTicket(ko.toJS(self));
+        if (kanban.rootModel) {
+            var dt = kanban.rootModel.dialogTicket();
+            if (dt && dt.id == self.id) {
+                console.log('Update dialog ticket');
+                kanban.rootModel.dialogTicket(ko.toJS(self));
+            }
         }
     };
 
@@ -147,11 +152,9 @@ kanban.Board = function(data) {
 
     /* Get column with ID 'id' */
     this.getColumn = function(id) {
-        var cols = self.columns();
-        for (var i in cols) {
-            if (cols[i].id == id) return cols[i];
-        }
-        return null;
+        return ko.utils.arrayFirst(self.columns(), function(item) {
+            return item.id == id;
+        });
     };
 
     /* Get column which contains ticket with ID 'ticketId' */
