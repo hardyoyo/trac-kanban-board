@@ -194,7 +194,7 @@ class KanbanBoard:
                     if key != 'id':
                         self.columns[index][key] = value
 
-    def fix_ticket_columns(self, request, saveChanges):
+    def fix_ticket_columns(self, request, saveChanges, forceSave):
         """Iterate through all tickets on board and check that ticket state matches column states.
            If it doesn't, move ticket to correct column."""
         self.log.debug('KanbanBoard::fix_ticket_columns')
@@ -218,7 +218,7 @@ class KanbanBoard:
         for col in self.columns:
             col['tickets'] = ticketIds[str(col['id'])]
 
-        if modified and saveChanges:
+        if (modified and saveChanges) or forceSave:
             self.save_wiki_data(request)
 
 class KanbanBoardMacro(WikiMacroBase):
@@ -311,7 +311,7 @@ class KanbanBoardMacro(WikiMacroBase):
         # We need to update board data to match (possibly changed) ticket states
         isEditable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
         self.log.debug('isEditable: %s', isEditable)
-        board.fix_ticket_columns(req, isEditable)
+        board.fix_ticket_columns(req, isEditable, False)
 
         if req.method == 'GET':
             self.log.debug('=== Get all columns')
@@ -329,7 +329,7 @@ class KanbanBoardMacro(WikiMacroBase):
                 board.update_column(col)
 
             board.update_tickets()
-            board.fix_ticket_columns(req, True)
+            board.fix_ticket_columns(req, True, True)
             return req.send(board.get_json(True), content_type='application/json')
 
     def get_templates_dirs(self):
