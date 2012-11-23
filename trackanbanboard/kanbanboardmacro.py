@@ -7,7 +7,6 @@ import trac.ticket.model as model
 
 from trac.core import implements, TracError
 from trac.ticket.api import TicketSystem
-from trac.ticket.query import Query
 from trac.util.datefmt import to_timestamp
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
@@ -19,8 +18,8 @@ from trac.wiki.model import WikiPage
 REQ_REGEXP = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
 class KanbanBoard:
-    dataStartRe = re.compile('(?P<start><(textarea|TEXTAREA)[^>]+(id|ID)=["\']kanbanBoardData["\'][^>]*>)')
-    dataEndRe = re.compile('(<\/(textarea|TEXTAREA)>)')
+    dataStartRe = re.compile('\s*(?P<start><(textarea|TEXTAREA)[^>]+(id|ID)=["\']kanbanBoardData["\'][^>]*>)')
+    dataEndRe = re.compile('\s*(<\/(textarea|TEXTAREA)>)')
     dataStartTag = '<textarea id="kanbanBoardData">'
     dataEndTag = '</textarea>'
 
@@ -118,7 +117,11 @@ class KanbanBoard:
         ids = self.get_ticket_ids()
         for id in ids:
             t = { 'id': id }
-            ticket = model.Ticket(self.env, id)
+            try:
+                ticket = model.Ticket(self.env, id)
+            except:
+                self.log.error('Failed to fetch ticket %d' % id)
+                continue
 
             if id in detailed:
                 for field in fields:
@@ -229,16 +232,16 @@ class KanbanBoardMacro(WikiMacroBase):
 
     {{{
     {{{
-        #!html
-        <textarea id="kanbanBoardData" style="display: none;">
-        {
-          "columns": [
-            { "id": 1, "name": "New", "states": ["new"], "tickets": [100, 124, 103], "wip": 5 },
-            { "id": 2, "name": "Ongoing", "states": ["assigned, accepted, reopened"], "tickets": [], "wip": 3 },
-            { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
-          ]
-        }
-        </textarea>
+    #!html
+    <textarea id="kanbanBoardData" style="display: none;">
+    {
+      "columns": [
+        { "id": 1, "name": "New", "states": ["new"], "tickets": [100, 124, 103], "wip": 5 },
+        { "id": 2, "name": "Ongoing", "states": ["assigned", "accepted", "reopened"], "tickets": [], "wip": 3 },
+        { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
+      ]
+    }
+    </textarea>
     }}}
     }}}
 
