@@ -253,6 +253,9 @@ class KanbanBoardMacro(WikiMacroBase):
 
     implements(ITemplateProvider, IRequestHandler)
 
+    # Ticket fields that can should have "not defined" option
+    kanbanOptionalFields = ['milestone', 'version']
+
     def save_ticket(self, ticketData, author, comment=''):
         self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticketData['id'], author))
         ticket = model.Ticket(self.env, ticketData['id'])
@@ -283,6 +286,9 @@ class KanbanBoardMacro(WikiMacroBase):
             self.log.debug('=== Get metadata')
             metaData = {}
             metaData['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
+            for field in metaData['ticketFields']:
+                if field['name'] in self.kanbanOptionalFields:
+                    field['kanbanOptional'] = True
             return req.send(json.dumps(metaData), content_type='application/json')
 
         argList = parse_arg_list(req.query_string)

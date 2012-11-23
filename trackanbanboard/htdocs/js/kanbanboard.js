@@ -117,6 +117,15 @@ kanban.Board = function(data) {
 
     this.setTicketFieldOptions = function(fieldName, options) {
         console.log('setTicketFieldOptions:', fieldName, options);
+
+        // Add the "not defined" option
+        for (var i in kanban.metadata.ticketFields) {
+            if (fieldName == kanban.metadata.ticketFields[i].name &&
+                kanban.metadata.ticketFields[i].kanbanOptional) {
+                options.unshift('');
+            }
+        }
+
         self.ticketFieldOptions[fieldName] = ko.observableArray(options);
     };
 
@@ -237,37 +246,26 @@ kanban.Board = function(data) {
     /* Check if dialog ticket has changed from original ticket and save changes if necessary */
     this.saveDialogTicket = function(originalTicket) {
         console.log('Save ticket:', self.dialogTicket(), originalTicket);
-        // TODO: If ticket status changed, move it to correct column
 
         var modified = false;
-        var modifiedColumns = [];
         var ticketColumn = self.getTicketColumn(originalTicket.id);
 
-        if (self.dialogTicket().summary != originalTicket.summary()) {
-            originalTicket.setField('summary', self.dialogTicket().summary);
-            modified = true;
-        }
-        if (self.dialogTicket().status != originalTicket.status()) {
-            originalTicket.setField('status', self.dialogTicket().status);
-            modified = true;
-        }
-        if (self.dialogTicket().priority != originalTicket.priority()) {
-            originalTicket.setField('priority', self.dialogTicket().priority);
-            modified = true;
-        }
-        if (self.dialogTicket().type != originalTicket.type()) {
-            originalTicket.setField('type', self.dialogTicket().type);
-            modified = true;
+        for (var i in kanban.metadata.ticketFields) {
+            var fieldName = kanban.metadata.ticketFields[i].name;
+            if (fieldName == 'time' || fieldName == 'changetime') continue;
+            if (self.dialogTicket()[fieldName] != originalTicket[fieldName]()) {
+                originalTicket.setField(fieldName, self.dialogTicket()[fieldName]);
+                modified = true;
+            }
         }
 
         if (modified) {
             ticketColumn.modifiedFields.push('tickets');
-            modifiedColumns.push(ticketColumn);
 
             kanban.request(
                 kanban.DATA_URL,
                 'POST',
-                ko.toJSON(modifiedColumns),
+                ko.toJSON([ticketColumn]),
                 function(data) {
                     console.log("updated", data);
                     self.updateData(data);
@@ -275,9 +273,7 @@ kanban.Board = function(data) {
                 function() {console.log("update error")});
 
             originalTicket.modifiedFields = [];
-            for (var i in modifiedColumns) {
-                modifiedColumns[i].modifiedFields = [];
-            }
+            ticketColumn.modifiedFields = [];
         }
     };
 

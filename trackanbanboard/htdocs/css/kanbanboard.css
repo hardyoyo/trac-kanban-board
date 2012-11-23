@@ -83,8 +83,8 @@ li.kanban-card .id-label
 
 #ticketDialog .ticket-table td:nth-child(odd)
 {
-    color: #666666;
-    background-color: #eee;
+    color: rgba(0, 0, 0, 0.6);;
+    background-color: rgb(255, 247, 174);
     text-align: right;
 }
 
@@ -94,6 +94,7 @@ li.kanban-card .id-label
 }
 
 #ticketDialog .ticket-table input,
+#ticketDialog .ticket-table textarea,
 #ticketDialog .ticket-table select
 {
     width: 90%;
@@ -108,5 +109,5 @@ li.kanban-card .id-label
 
 #logTitle:hover
 {
-    background-color: #eee;
+    background-color: rgb(255, 247, 174);
 }

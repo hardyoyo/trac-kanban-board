@@ -54,16 +54,16 @@
             <tr>
                 <td data-bind="text: $$root.fieldLabel('reporter')">reporter</td>
                 <td data-bind="if: $$data.reporter">
-                    <span data-bind="text: reporter">reporter</span>
+                    <input type="text" data-bind="value: reporter, enable: IS_EDITABLE" />
                 </td>
                 <td data-bind="text: $$root.fieldLabel('owner')">owner</td>
                 <td data-bind="if: $$data.owner">
-                    <span data-bind="text: owner">owner</span>
+                    <input type="text" data-bind="value: owner, enable: IS_EDITABLE" />
                 </td>
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('milestone')">milestone</td>
-                <td data-bind="if: $$data.milestone">
+                <td data-bind="if: typeof $$data.milestone !== 'undefined'">
                     <select data-bind="options: $$root.ticketFieldOptions['milestone'], value: milestone, enable: IS_EDITABLE">milestone</select>
                 </td>
                 <td data-bind="text: $$root.fieldLabel('component')">component</td>
@@ -73,7 +73,7 @@
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('version')">version</td>
-                <td data-bind="if: $$data.version">
+                <td data-bind="if: typeof $$data.version !== 'undefined'">
                     <select data-bind="options: $$root.ticketFieldOptions['version'], value: version, enable: IS_EDITABLE">version</select>
                 </td>
                 <td data-bind="text: $$root.fieldLabel('resolution')">resolution</td>
@@ -83,18 +83,18 @@
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('keywords')">keywords</td>
-                <td data-bind="if: $$data.keywords">
-                    <span data-bind="text: keywords">keywords</span>
+                <td data-bind="if: typeof $$data.keywords !== 'undefined'">
+                    <input type="text" data-bind="value: keywords, enable: IS_EDITABLE" />
                 </td>
                 <td data-bind="text: $$root.fieldLabel('cc')">cc</td>
-                <td data-bind="if: $$data.cc">
-                    <span data-bind="text: cc">cc</span>
+                <td data-bind="if: typeof $$data.cc !== 'undefined'">
+                    <input type="text" data-bind="value: cc, enable: IS_EDITABLE" />
                 </td>
             </tr>
             <tr>
                 <td data-bind="text: $$root.fieldLabel('description')" style="vertical-align: top;">description</td>
-                <td colspan="3" data-bind="if: $$data.description">
-                    <span data-bind="text: description">description</span>
+                <td colspan="3" data-bind="if: typeof $$data.description !== 'undefined'">
+                    <textarea data-bind="value: description, enable: IS_EDITABLE">description</textarea>
                 </td>
             </tr>
         </table>
