@@ -32,7 +32,36 @@ class KanbanBoard:
         self.tickets = self.fetch_tickets(detailedTickets)
 
     def is_ready(self):
-        return self.columns is not None
+        return self.columns is not None and len(self.columns) > 0
+
+    # Adds tickets given in "ids" to the board but not necessarily in right column.
+    # Always call fix_ticket_columns after this.
+    # Returns number of tickets added to the board.
+    def add_tickets(self, ids):
+        if not self.is_ready():
+            return 0
+
+        currentIds = self.get_ticket_ids()
+        validIds = []
+        for id in ids:
+            if id in currentIds:
+                self.log.error('Ticket %d is already on the board' % id)
+                continue
+
+            t = { 'id': id }
+            try:
+                ticket = model.Ticket(self.env, id)
+            except:
+                self.log.error('Failed to fetch ticket %d' % id)
+                continue
+
+            t['summary'] = ticket.get_value_or_default('summary')
+            t['status'] = ticket.get_value_or_default('status')
+            self.tickets[str(id)] = t
+            validIds.append(id)
+
+        self.columns[0]['tickets'].extend(validIds)
+        return len(validIds)
 
     def update_tickets(self):
         self.tickets = self.fetch_tickets([])
@@ -270,9 +299,20 @@ class KanbanBoardMacro(WikiMacroBase):
     def match_request(self, req):
         return REQ_REGEXP.match(req.path_info)
 
-    # GET  /kanbanboard/ returns metadata (ticket fields etc.)
-    # GET  /kanbanboard/[board ID]/ returns board and ticket data
-    # POST /kanbanboard/[board ID]/ updates board data and saves ticket changes, returns board & ticket data
+    # GET  /kanbanboard/
+    #      Returns metadata (ticket fields etc.)
+    #
+    # GET  /kanbanboard/[board ID]
+    #      Returns board data including minimal ticket data for all tickets on the board.
+    #
+    # POST /kanbanboard/[board ID]
+    #      Updates board data and saves ticket changes. Returns board & ticket data.
+    #
+    # ?tickets=1,2
+    #      Instead of minimal ticket data, returns full data for tickets #1 and #2.
+    #
+    # ?add=1,2
+    #      Before handling request, adds tickets #1 and #2 (if valid) to the board.
 
     def process_request(self, req):
         self.log.debug('=== HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
@@ -296,22 +336,25 @@ class KanbanBoardMacro(WikiMacroBase):
 
         argList = parse_arg_list(req.query_string)
         detailedTickets = []
+        addedTickets = []
         for arg in argList:
             if arg[0] == 'tickets':
-                ids = arg[1].split(',')
-                for id in ids:
-                    try:
-                        detailedTickets.append(int(id))
-                    except ValueError:
-                        pass
-        self.log.debug(detailedTickets)
+                detailedTickets = self.parse_id_list(arg[1])
+            elif arg[0] == 'add':
+                addedTickets = self.parse_id_list(arg[1])
+        self.log.debug('Detailed tickets: %s' % repr(detailedTickets))
+        self.log.debug('Added tickets: %s' % repr(addedTickets))
 
         board = KanbanBoard(boardId, detailedTickets, req, self.env, self.log)
+
+        added = 0
+        if len(addedTickets) > 0:
+            added = board.add_tickets(addedTickets)
 
         # We need to update board data to match (possibly changed) ticket states
         isEditable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
         self.log.debug('isEditable: %s', isEditable)
-        board.fix_ticket_columns(req, isEditable, False)
+        board.fix_ticket_columns(req, isEditable, added > 0)
 
         if req.method == 'GET':
             self.log.debug('=== Get all columns')
@@ -331,6 +374,18 @@ class KanbanBoardMacro(WikiMacroBase):
             board.update_tickets()
             board.fix_ticket_columns(req, True, True)
             return req.send(board.get_json(True), content_type='application/json')
+
+    # In: comma-separated list of integers (as string)
+    # Out: list of integers
+    def parse_id_list(self, ids):
+        result = []
+        parts = ids.split(',')
+        for part in parts:
+            try:
+                result.append(int(part))
+            except ValueError:
+                pass
+        return result
 
     def get_templates_dirs(self):
         from pkg_resources import resource_filename

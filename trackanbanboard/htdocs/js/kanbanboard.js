@@ -277,6 +277,20 @@ kanban.Board = function(data) {
         }
     };
 
+    this.addTicket = function(ticketId) {
+        console.log('Add ticket:', ticketId);
+
+        var url = kanban.DATA_URL + '?add=' + ticketId;
+        kanban.request(
+            url,
+            'GET',
+            null,
+            function(data) {
+                console.log("added", data);
+                self.updateData(data);
+            },
+            function() {console.log("add error")});
+    };
 };
 
 kanban.request = function(url, type, reqData, onSuccess, onError) {
@@ -311,6 +325,16 @@ kanban.onDataFetched = function(data) {
         opacity: 0.5
     };
     ko.applyBindings(kanban.rootModel);
+
+    $('.board-container').on('drop', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var id = kanbanutil.getTicketIdFromDropEvent(e, TRAC_PROJECT_NAME);
+        if (id) {
+            kanban.rootModel.addTicket(id);
+        }
+        return false;
+    });
 };
 
 kanban.onDataFetchError = function(jqXHR, textStatus, error) {
