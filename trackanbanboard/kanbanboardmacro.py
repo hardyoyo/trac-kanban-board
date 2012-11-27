@@ -63,6 +63,28 @@ class KanbanBoard:
         self.columns[0]['tickets'].extend(validIds)
         return len(validIds)
 
+    # Removes tickets given in "ids" from the board.
+    # Returns number of tickets added to the board.
+    def remove_tickets(self, ids):
+        if not self.is_ready():
+            return 0
+
+        removed = 0
+        for col in self.columns:
+            newList = []
+            for tid in col['tickets']:
+                if tid in ids:
+                    try:
+                        del self.tickets[str(tid)]
+                        removed += 1
+                    except KeyError:
+                        pass
+                else:
+                    newList.append(tid)
+            col['tickets'] = newList
+
+        return removed
+
     def update_tickets(self):
         self.tickets = self.fetch_tickets([])
 
@@ -313,6 +335,9 @@ class KanbanBoardMacro(WikiMacroBase):
     #
     # ?add=1,2
     #      Before handling request, adds tickets #1 and #2 (if valid) to the board.
+    #
+    # ?remove=1,2
+    #      Before handling request, removes tickets #1 and #2 from the board.
 
     def process_request(self, req):
         self.log.debug('=== HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
@@ -337,13 +362,17 @@ class KanbanBoardMacro(WikiMacroBase):
         argList = parse_arg_list(req.query_string)
         detailedTickets = []
         addedTickets = []
+        removedTickets = []
         for arg in argList:
             if arg[0] == 'tickets':
                 detailedTickets = self.parse_id_list(arg[1])
             elif arg[0] == 'add':
                 addedTickets = self.parse_id_list(arg[1])
+            elif arg[0] == 'remove':
+                removedTickets = self.parse_id_list(arg[1])
         self.log.debug('Detailed tickets: %s' % repr(detailedTickets))
         self.log.debug('Added tickets: %s' % repr(addedTickets))
+        self.log.debug('Removed tickets: %s' % repr(removedTickets))
 
         board = KanbanBoard(boardId, detailedTickets, req, self.env, self.log)
 
@@ -351,10 +380,14 @@ class KanbanBoardMacro(WikiMacroBase):
         if len(addedTickets) > 0:
             added = board.add_tickets(addedTickets)
 
+        removed = 0
+        if len(removedTickets) > 0:
+            removed = board.remove_tickets(removedTickets)
+
         # We need to update board data to match (possibly changed) ticket states
         isEditable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
         self.log.debug('isEditable: %s', isEditable)
-        board.fix_ticket_columns(req, isEditable, added > 0)
+        board.fix_ticket_columns(req, isEditable, added > 0 or removed > 0)
 
         if req.method == 'GET':
             self.log.debug('=== Get all columns')

@@ -227,10 +227,14 @@ kanban.Board = function(data) {
         console.log('showTicketDialog');
         var buttons = {};
         if (IS_EDITABLE) {
+            buttons['Remove from board'] = function() {
+                self.removeTicket(self.selectedTicket().id);
+                $(this).dialog("close");
+            };
             buttons['Save'] = function() {
                 self.saveDialogTicket(self.selectedTicket());
                 $(this).dialog("close");
-            }
+            };
         }
         buttons['Cancel'] = function() { $(this).dialog("close"); };
 
@@ -290,6 +294,21 @@ kanban.Board = function(data) {
                 self.updateData(data);
             },
             function() {console.log("add error")});
+    };
+
+    this.removeTicket = function(ticketId) {
+        console.log('Remove ticket:', ticketId);
+
+        var url = kanban.DATA_URL + '?remove=' + ticketId;
+        kanban.request(
+            url,
+            'GET',
+            null,
+            function(data) {
+                console.log("removed", data);
+                self.updateData(data);
+            },
+            function() {console.log("remove error")});
     };
 };
 
