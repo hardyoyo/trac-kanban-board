@@ -8,18 +8,18 @@ import trac.ticket.model as model
 from trac.core import implements, TracError
 from trac.ticket.api import TicketSystem
 from trac.util.datefmt import to_timestamp
-from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase
 from trac.web import IRequestHandler
 from trac.web.api import parse_arg_list
 from trac.web.chrome import ITemplateProvider, Chrome, add_stylesheet, add_script, add_script_data
+from trac.wiki.formatter import format_to_html
 from trac.wiki.model import WikiPage
 
 REQ_REGEXP = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
 class KanbanBoard:
-    dataStartRe = re.compile('\s*(?P<start><(textarea|TEXTAREA)[^>]+(id|ID)=["\']kanbanBoardData["\'][^>]*>)')
-    dataEndRe = re.compile('\s*(<\/(textarea|TEXTAREA)>)')
+    dataStartRe = re.compile('\s*({{{)?#!KanbanBoard')
+    dataEndRe = re.compile('\s*}}}')
     dataStartTag = '<textarea id="kanbanBoardData">'
     dataEndTag = '</textarea>'
 
@@ -273,18 +273,12 @@ class KanbanBoard:
             self.save_wiki_data(request)
 
 class KanbanBoardMacro(WikiMacroBase):
-    """Insert simple kanban board into the wiki page.
-
-    Macro accepts following arguments as comma separated list of 'key=value' pairs:
-    ||= Key  =||= Description                       =||= Example    =||
-    || height || Board height in css-accepted format || height=300px ||
-
-    Board configuration and data is stored on separate textarea on same wiki page as the macro. Below is an example configuration:
+    """
+    Usage:
 
     {{{
     {{{
-    #!html
-    <textarea id="kanbanBoardData" style="display: none;">
+    #!KanbanBoard height=400px
     {
       "columns": [
         { "id": 1, "name": "New", "states": ["new"], "tickets": [100, 124, 103], "wip": 5 },
@@ -292,16 +286,18 @@ class KanbanBoardMacro(WikiMacroBase):
         { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
       ]
     }
-    </textarea>
     }}}
     }}}
 
-    Configuration must be inside textarea tags with id attribute "kanbanBoardData". Opening and closing tags must be on their own lines.
-    The configuration itself is in JSON format and consists of list of column objects. Each column must have following properties:
+    Macro accepts following arguments given as 'key=value' pairs right after macro name:
+    ||= Key  =||= Description                       =||= Example    =||= Default =||
+    || height || Board height in css-accepted format || height=400px || 300px     ||
+
+    Macro name and optional arguments must be followed by board configuration. Configuration is in JSON format and consists of list of columns where each column must have following properties:
     || id || Unique number. ||
     || name || Column name. ||
     || states || List of ticket states which map to this column. For example in example configuration above if the status of ticket #100 changes to "accepted" it moves to middle column (named "Ongoing"). If ticket is dragged to middle column its status changes to first state on this list ("assigned"). ||
-    || tickets || List of initial tickets (ticket IDs) in the column. This list is updated by the macro when ticket status changes. ||
+    || tickets || List of initial tickets in the column. This list is updated by the macro when ticket status changes. ||
     || wip || Work-in-progress limit for the column. ||
     """
 
@@ -428,12 +424,23 @@ class KanbanBoardMacro(WikiMacroBase):
         from pkg_resources import resource_filename
         return [('kbm', os.path.abspath(resource_filename('trackanbanboard', 'htdocs')))]
 
-    def expand_macro(self, formatter, name, text):
-        args = parse_args(text)
+    def expand_macro(self, formatter, name, text, args):
+        if text is None:
+            data = {
+                'error': 'Board data is not defined',
+                'usage': format_to_html(self.env, formatter.context, self.__doc__)
+            }
+            add_stylesheet(formatter.req, 'kbm/css/kanbanboard.css')
+            return Chrome(self.env).render_template(formatter.req,
+                'kanbanerror.html',
+                data,
+                None,
+                fragment=True).render(strip_whitespace=False)
+
         self.log.debug(args)
         boardHeight = '300px'
         if args:
-            boardHeight = args[1].get('height', '300px')
+            boardHeight = args.get('height', '300px')
 
         projectName = self.env.path.split('/')[-1]
         pageName = formatter.req.path_info.split('/')[-1]

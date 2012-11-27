@@ -118,3 +118,16 @@ li.kanban-card .id-label
     height: 400px;
     border-width: 0;
 }
+
+.error-container
+{
+    border: 1px solid #aaaaaa;
+    padding: 0.5em;
+    border-radius: 0.2em;
+}
+
+.macro-error
+{
+    font-size: 1.5em;
+    color: #cd0a0a;
+}
