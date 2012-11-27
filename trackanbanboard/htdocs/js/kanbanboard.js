@@ -247,6 +247,17 @@ kanban.Board = function(data) {
         });
     };
 
+    this.showQueryDialog = function() {
+        console.log('showQueryDialog');
+        $('#queryFrame').attr('src', kanban.QUERY_URL);
+        var $dialogDiv = $('#queryDialog');
+        kanban.queryDialog = $dialogDiv.dialog({
+            title: 'Drag and drop ticket links to Kanban board',
+            minWidth: 600,
+            position: 'right'
+        });
+    };
+
     /* Check if dialog ticket has changed from original ticket and save changes if necessary */
     this.saveDialogTicket = function(originalTicket) {
         console.log('Save ticket:', self.dialogTicket(), originalTicket);
@@ -345,7 +356,12 @@ kanban.onDataFetched = function(data) {
     };
     ko.applyBindings(kanban.rootModel);
 
-    $('.board-container').on('drop', function(e) {
+    $('.board-container').on('dragover', function(e) {
+        // Default dragover behaviour must be canceled or else drop event is never fired
+        e.stopPropagation();
+        e.preventDefault();
+        return false;
+    }).on('drop', function(e) {
         e.stopPropagation();
         e.preventDefault();
         var id = kanbanutil.getTicketIdFromDropEvent(e, TRAC_PROJECT_NAME);
@@ -364,6 +380,8 @@ $(document).ready(function(){
     console.log("Document ready. Board ID: " + KANBAN_BOARD_ID + ", " + (IS_EDITABLE ? "editable" : "read-only"));
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
+    kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
+
     kanban.request(
         '/' + TRAC_PROJECT_NAME + '/kanbanboard/',
         'GET',

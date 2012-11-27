@@ -3,6 +3,7 @@
      xmlns:xi="http://www.w3.org/2001/XInclude">
     <div class="board-container" style="height: $height;">
         <button data-bind="click: $$root.fetchData">Refresh</button>
+        <button data-bind="click: $$root.showQueryDialog">Add tickets</button>
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
@@ -19,7 +20,7 @@
             </li>
         </ul>
     </div>
-    <div id="ticketDialog" data-bind="with: dialogTicket">
+    <div id="ticketDialog" data-bind="with: dialogTicket" style="display: none;">
         <table class="ticket-table">
             <tr>
                 <td data-bind="text: $$root.fieldLabel('summary')">summary</td>
@@ -108,5 +109,8 @@
                 </li>
             </ul>
         </div>
+    </div>
+    <div id="queryDialog" style="display: none;">
+        <iframe id="queryFrame" src="">query</iframe>
     </div>
 </div>
