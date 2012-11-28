@@ -357,18 +357,24 @@ kanban.onDataFetched = function(data) {
     ko.applyBindings(kanban.rootModel);
 
     $('.board-container').on('dragover', function(e) {
-        // Default dragover behaviour must be canceled or else drop event is never fired
-        e.stopPropagation();
-        e.preventDefault();
-        return false;
-    }).on('drop', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        var id = kanbanutil.getTicketIdFromDropEvent(e, TRAC_PROJECT_NAME);
-        if (id) {
-            kanban.rootModel.addTicket(id);
+        if (IS_EDITABLE) {
+            // Default dragover behaviour must be canceled or else drop event is never fired
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
         }
-        return false;
+        return true
+    }).on('drop', function(e) {
+        if (IS_EDITABLE) {
+            e.stopPropagation();
+            e.preventDefault();
+            var id = kanbanutil.getTicketIdFromDropEvent(e, TRAC_PROJECT_NAME);
+            if (id) {
+                kanban.rootModel.addTicket(id);
+            }
+            return false;
+        }
+        return true
     });
 };
 
