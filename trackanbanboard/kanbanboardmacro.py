@@ -406,7 +406,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
     def get_htdocs_dirs(self):
         from pkg_resources import resource_filename
-        return [('kbm', os.path.abspath(resource_filename('trackanbanboard', 'htdocs')))]
+        return [('trackanbanboard', os.path.abspath(resource_filename('trackanbanboard', 'htdocs')))]
 
     def expand_macro(self, formatter, name, text, args):
         if text is None:
@@ -414,7 +414,7 @@ class KanbanBoardMacro(WikiMacroBase):
                 'error': 'Board data is not defined',
                 'usage': format_to_html(self.env, formatter.context, self.__doc__)
             }
-            add_stylesheet(formatter.req, 'kbm/css/kanbanboard.css')
+            add_stylesheet(formatter.req, 'trackanbanboard/css/kanbanboard.css')
             return Chrome(self.env).render_template(formatter.req,
                 'kanbanerror.html',
                 data,
@@ -440,16 +440,16 @@ class KanbanBoardMacro(WikiMacroBase):
             'IS_EDITABLE': is_editable
         }
 
-        add_script(formatter.req, 'kbm/js/libs/jquery-1.8.2.js')
-        add_script(formatter.req, 'kbm/js/libs/jquery-ui-1.9.1.custom.min.js')
-        add_script(formatter.req, 'kbm/js/libs/knockout-2.2.0.js')
-        add_script(formatter.req, 'kbm/js/libs/knockout.mapping.js')
-        add_script(formatter.req, 'kbm/js/libs/knockout-sortable.min.js')
-        add_script(formatter.req, 'kbm/js/kanbanutil.js')
-        add_script(formatter.req, 'kbm/js/kanbanboard.js')
+        add_script(formatter.req, 'trackanbanboard/js/libs/jquery-1.8.2.js')
+        add_script(formatter.req, 'trackanbanboard/js/libs/jquery-ui-1.9.1.custom.min.js')
+        add_script(formatter.req, 'trackanbanboard/js/libs/knockout-2.2.0.js')
+        add_script(formatter.req, 'trackanbanboard/js/libs/knockout.mapping.js')
+        add_script(formatter.req, 'trackanbanboard/js/libs/knockout-sortable.min.js')
+        add_script(formatter.req, 'trackanbanboard/js/kanbanutil.js')
+        add_script(formatter.req, 'trackanbanboard/js/kanbanboard.js')
         add_script_data(formatter.req, jsGlobals)
-        add_stylesheet(formatter.req, 'kbm/css/jquery-ui-1.9.1.custom.min.css')
-        add_stylesheet(formatter.req, 'kbm/css/kanbanboard.css')
+        add_stylesheet(formatter.req, 'trackanbanboard/css/jquery-ui-1.9.1.custom.min.css')
+        add_stylesheet(formatter.req, 'trackanbanboard/css/kanbanboard.css')
 
         return Chrome(self.env).render_template(formatter.req,
             'kanbanboard.html',
