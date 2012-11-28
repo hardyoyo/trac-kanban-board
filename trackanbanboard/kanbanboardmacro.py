@@ -8,43 +8,37 @@ import trac.ticket.model as model
 from trac.core import implements, TracError
 from trac.ticket.api import TicketSystem
 from trac.util.datefmt import to_timestamp
-from trac.wiki.macros import WikiMacroBase
 from trac.web import IRequestHandler
 from trac.web.api import parse_arg_list
 from trac.web.chrome import ITemplateProvider, Chrome, add_stylesheet, add_script, add_script_data
 from trac.wiki.formatter import format_to_html
+from trac.wiki.macros import WikiMacroBase
 from trac.wiki.model import WikiPage
 
-REQ_REGEXP = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
 class KanbanBoard:
-    dataStartRe = re.compile('\s*({{{)?#!KanbanBoard')
-    dataEndRe = re.compile('\s*}}}')
-    dataStartTag = '<textarea id="kanbanBoardData">'
-    dataEndTag = '</textarea>'
+    data_start_regexp = re.compile('\s*({{{)?#!KanbanBoard')
+    data_end_regexp = re.compile('\s*}}}')
 
-    def __init__(self, name, detailedTickets, request, env, logger):
+    def __init__(self, name, detailed_tickets, env, logger):
         self.name = name
         self.env = env
         self.log = logger
         self.columns = self.load_wiki_data(self.name)['columns']
-        self.statusMap = self.get_status_to_column_map(self.columns)
-        self.tickets = self.fetch_tickets(detailedTickets)
-
-    def is_ready(self):
-        return self.columns is not None and len(self.columns) > 0
+        self.status_map = self.get_status_to_column_map(self.columns)
+        self.tickets = self.fetch_tickets(detailed_tickets)
 
     # Adds tickets given in "ids" to the board but not necessarily in right column.
     # Always call fix_ticket_columns after this.
     # Returns number of tickets added to the board.
     def add_tickets(self, ids):
-        if not self.is_ready():
+        if not self.columns:
             return 0
 
-        currentIds = self.get_ticket_ids()
-        validIds = []
+        current_ids = self.get_ticket_ids()
+        valid_ids = []
         for id in ids:
-            if id in currentIds:
+            if id in current_ids:
                 self.log.error('Ticket %d is already on the board' % id)
                 continue
 
@@ -58,20 +52,20 @@ class KanbanBoard:
             t['summary'] = ticket.get_value_or_default('summary')
             t['status'] = ticket.get_value_or_default('status')
             self.tickets[str(id)] = t
-            validIds.append(id)
+            valid_ids.append(id)
 
-        self.columns[0]['tickets'].extend(validIds)
-        return len(validIds)
+        self.columns[0]['tickets'].extend(valid_ids)
+        return len(valid_ids)
 
     # Removes tickets given in "ids" from the board.
     # Returns number of tickets added to the board.
     def remove_tickets(self, ids):
-        if not self.is_ready():
+        if not self.columns:
             return 0
 
         removed = 0
         for col in self.columns:
-            newList = []
+            new_list = []
             for tid in col['tickets']:
                 if tid in ids:
                     try:
@@ -80,39 +74,39 @@ class KanbanBoard:
                     except KeyError:
                         pass
                 else:
-                    newList.append(tid)
-            col['tickets'] = newList
+                    new_list.append(tid)
+            col['tickets'] = new_list
 
         return removed
 
     def update_tickets(self):
         self.tickets = self.fetch_tickets([])
 
-    def load_wiki_data(self, pageName):
-        self.log.debug('KanbanBoard::load_wiki_data: %s' % pageName)
+    def load_wiki_data(self, page_name):
+        self.log.debug('KanbanBoard::load_wiki_data: %s' % page_name)
 
-        page = WikiPage(self.env, pageName)
+        page = WikiPage(self.env, page_name)
         if not page.exists:
-            self.log.error('Wiki page "%s" doesn\'t exist' % pageName)
+            self.log.error('Wiki page "%s" doesn\'t exist' % page_name)
             return None
 
         lines = page.text.split('\n')
         first = -1
         last = -1
-        dataLines = []
+        data_lines = []
 
         for index, line in enumerate(lines):
             if first < 0:
-                if self.dataStartRe.match(line):
+                if self.data_start_regexp.match(line):
                     first = index + 1
             else:
-                if self.dataEndRe.match(line):
+                if self.data_end_regexp.match(line):
                     last = index - 1
                 elif last < 0:
-                    dataLines.append(line)
+                    data_lines.append(line)
 
         if last > 0:
-            return json.loads('\n'.join(dataLines))
+            return json.loads('\n'.join(data_lines))
 
         return None
 
@@ -127,23 +121,23 @@ class KanbanBoard:
         lines = page.text.split('\n')
         first = -1
         last = -1
-        newLines = []
+        new_lines = []
 
         for index, line in enumerate(lines):
             if first < 0:
-                newLines.append(line)
-                if self.dataStartRe.match(line):
+                new_lines.append(line)
+                if self.data_start_regexp.match(line):
                     first = index + 1
-                    newLines.append(self.get_json(False))
+                    new_lines.append(self.get_json(False))
             elif last < 0:
-                if self.dataEndRe.match(line):
+                if self.data_end_regexp.match(line):
                     last = index - 1
-                    newLines.append(line)
+                    new_lines.append(line)
             else:
-                newLines.append(line)
+                new_lines.append(line)
 
         if last > 0:
-            page.text = '\n'.join(newLines)
+            page.text = '\n'.join(new_lines)
             try:
                 page.save(req.authname, 'Kanban board data changed', req.remote_addr)
             except TracError as e:
@@ -183,14 +177,14 @@ class KanbanBoard:
 
                 t['changelog'] = []
                 changelog = ticket.get_changelog()
-                for logItem in changelog:
+                for log_item in changelog:
                     item = {}
-                    item['time'] = to_timestamp(logItem[0]) * 1000
-                    item['author'] = logItem[1]
-                    item['field'] = logItem[2]
-                    item['oldValue'] = logItem[3]
-                    item['newValue'] = logItem[4]
-                    item['permanent'] = logItem[5]
+                    item['time'] = to_timestamp(log_item[0]) * 1000
+                    item['author'] = log_item[1]
+                    item['field'] = log_item[2]
+                    item['oldValue'] = log_item[3]
+                    item['newValue'] = log_item[4]
+                    item['permanent'] = log_item[5]
                     t['changelog'].append(item)
             else:
                 t['summary'] = ticket.get_value_or_default('summary')
@@ -200,13 +194,13 @@ class KanbanBoard:
 
         return tickets
 
-    def get_json(self, includeTickets):
+    def get_json(self, include_tickets):
         """Return JSON representation of the board.
            If 'includeTickets' is True, each column's 'tickets' property contains ticket objects.
            If False, 'tickets' property is list of ticket IDs.
         """
         result = ''
-        if includeTickets:
+        if include_tickets:
             jason = { 'columns': [] }
             for col in self.columns:
                 colcopy = copy.deepcopy(col)
@@ -231,45 +225,45 @@ class KanbanBoard:
             ids.extend(col['tickets'])
         return ids
 
-    def update_column(self, newColumn):
-        self.log.debug('KanbanBoard::update_column: %d' % newColumn['id'])
-        self.log.debug(newColumn)
+    def update_column(self, new_column):
+        self.log.debug('KanbanBoard::update_column: %d' % new_column['id'])
+        self.log.debug(new_column)
 
-        if 'tickets' in newColumn:
+        if 'tickets' in new_column:
             # convert ticket list to list of integers (ticket IDs)
-            newColumn['tickets'] = map(lambda x: x['id'], newColumn['tickets'])
+            new_column['tickets'] = map(lambda x: x['id'], new_column['tickets'])
 
         for index, column in enumerate(self.columns):
-            if column['id'] == newColumn['id']:
-                for key, value in newColumn.items():
+            if column['id'] == new_column['id']:
+                for key, value in new_column.items():
                     if key != 'id':
                         self.columns[index][key] = value
 
-    def fix_ticket_columns(self, request, saveChanges, forceSave):
+    def fix_ticket_columns(self, request, save_changes, force_save):
         """Iterate through all tickets on board and check that ticket state matches column states.
            If it doesn't, move ticket to correct column."""
         self.log.debug('KanbanBoard::fix_ticket_columns')
         modified = False
 
-        ticketIds = {} # 'columnID': [ticketID, ticketID, ticketID]
+        ticket_ids = {} # 'columnID': [ticketID, ticketID, ticketID]
         for col in self.columns:
-            ticketIds[str(col['id'])] = []
+            ticket_ids[str(col['id'])] = []
 
         for col in self.columns:
             for tid in col['tickets']:
                 if (str(tid) in self.tickets):
                     ticket = self.tickets[str(tid)]
-                    colId = self.statusMap[ticket['status']]
+                    colId = self.status_map[ticket['status']]
                     if colId != col['id']:
                         modified = True
-                        ticketIds[str(colId)].insert(0, tid)
+                        ticket_ids[str(colId)].insert(0, tid)
                     else:
-                        ticketIds[str(colId)].append(tid)
+                        ticket_ids[str(colId)].append(tid)
 
         for col in self.columns:
-            col['tickets'] = ticketIds[str(col['id'])]
+            col['tickets'] = ticket_ids[str(col['id'])]
 
-        if (modified and saveChanges) or forceSave:
+        if (modified and save_changes) or force_save:
             self.save_wiki_data(request)
 
 class KanbanBoardMacro(WikiMacroBase):
@@ -303,19 +297,21 @@ class KanbanBoardMacro(WikiMacroBase):
 
     implements(ITemplateProvider, IRequestHandler)
 
-    # Ticket fields that can should have "not defined" option
-    kanbanOptionalFields = ['milestone', 'version']
+    request_regexp = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
-    def save_ticket(self, ticketData, author, comment=''):
-        self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticketData['id'], author))
-        ticket = model.Ticket(self.env, ticketData['id'])
-        for key, value in ticketData.items():
+    # Ticket fields that can should have "not defined" option
+    kanban_optional_fields = ['milestone', 'version']
+
+    def save_ticket(self, ticket_data, author, comment=''):
+        self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticket_data['id'], author))
+        ticket = model.Ticket(self.env, ticket_data['id'])
+        for key, value in ticket_data.items():
             if key != 'id':
                 ticket[key] = value
         ticket.save_changes(author, comment)
 
     def match_request(self, req):
-        return REQ_REGEXP.match(req.path_info)
+        return self.request_regexp.match(req.path_info)
 
     # GET  /kanbanboard/
     #      Returns metadata (ticket fields etc.)
@@ -341,49 +337,49 @@ class KanbanBoardMacro(WikiMacroBase):
         if req.method != 'GET' and req.method != 'POST':
             return req.send([], content_type='application/json')
 
-        boardId = None
-        match = REQ_REGEXP.match(req.path_info)
+        board_id = None
+        match = self.request_regexp.match(req.path_info)
         if match:
-            boardId = match.group('bid')
+            board_id = match.group('bid')
 
-        if boardId is None:
+        if board_id is None:
             self.log.debug('=== Get metadata')
-            metaData = {}
-            metaData['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
-            for field in metaData['ticketFields']:
-                if field['name'] in self.kanbanOptionalFields:
+            meta_data = {}
+            meta_data['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
+            for field in meta_data['ticketFields']:
+                if field['name'] in self.kanban_optional_fields:
                     field['kanbanOptional'] = True
-            return req.send(json.dumps(metaData), content_type='application/json')
+            return req.send(json.dumps(meta_data), content_type='application/json')
 
-        argList = parse_arg_list(req.query_string)
-        detailedTickets = []
-        addedTickets = []
-        removedTickets = []
-        for arg in argList:
+        arg_list = parse_arg_list(req.query_string)
+        detailed_tickets = []
+        added_tickets = []
+        removed_tickets= []
+        for arg in arg_list:
             if arg[0] == 'tickets':
-                detailedTickets = self.parse_id_list(arg[1])
+                detailed_tickets = self._parse_id_list(arg[1])
             elif arg[0] == 'add':
-                addedTickets = self.parse_id_list(arg[1])
+                added_tickets = self._parse_id_list(arg[1])
             elif arg[0] == 'remove':
-                removedTickets = self.parse_id_list(arg[1])
-        self.log.debug('Detailed tickets: %s' % repr(detailedTickets))
-        self.log.debug('Added tickets: %s' % repr(addedTickets))
-        self.log.debug('Removed tickets: %s' % repr(removedTickets))
+                removed_tickets = self._parse_id_list(arg[1])
+        self.log.debug('Detailed tickets: %s' % repr(detailed_tickets))
+        self.log.debug('Added tickets: %s' % repr(added_tickets))
+        self.log.debug('Removed tickets: %s' % repr(removed_tickets))
 
-        board = KanbanBoard(boardId, detailedTickets, req, self.env, self.log)
+        board = KanbanBoard(board_id, detailed_tickets, self.env, self.log)
 
         added = 0
-        if len(addedTickets) > 0:
-            added = board.add_tickets(addedTickets)
+        if len(added_tickets) > 0:
+            added = board.add_tickets(added_tickets)
 
         removed = 0
-        if len(removedTickets) > 0:
-            removed = board.remove_tickets(removedTickets)
+        if len(removed_tickets) > 0:
+            removed = board.remove_tickets(removed_tickets)
 
         # We need to update board data to match (possibly changed) ticket states
-        isEditable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
-        self.log.debug('isEditable: %s', isEditable)
-        board.fix_ticket_columns(req, isEditable, added > 0 or removed > 0)
+        is_editable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
+        self.log.debug('is_editable: %s', is_editable)
+        board.fix_ticket_columns(req, is_editable, added > 0 or removed > 0)
 
         if req.method == 'GET':
             self.log.debug('=== Get all columns')
@@ -403,18 +399,6 @@ class KanbanBoardMacro(WikiMacroBase):
             board.update_tickets()
             board.fix_ticket_columns(req, True, True)
             return req.send(board.get_json(True), content_type='application/json')
-
-    # In: comma-separated list of integers (as string)
-    # Out: list of integers
-    def parse_id_list(self, ids):
-        result = []
-        parts = ids.split(',')
-        for part in parts:
-            try:
-                result.append(int(part))
-            except ValueError:
-                pass
-        return result
 
     def get_templates_dirs(self):
         from pkg_resources import resource_filename
@@ -438,22 +422,22 @@ class KanbanBoardMacro(WikiMacroBase):
                 fragment=True).render(strip_whitespace=False)
 
         self.log.debug(args)
-        boardHeight = '300px'
+        board_height = '300px'
         if args:
-            boardHeight = args.get('height', '300px')
+            board_height = args.get('height', '300px')
 
-        projectName = self.env.path.split('/')[-1]
-        pageName = formatter.req.path_info.split('/')[-1]
-        isEditable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
+        project_name = self.env.path.split('/')[-1]
+        page_name = formatter.req.path_info.split('/')[-1]
+        is_editable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
 
         data = {
             'css_class': 'trac-kanban-board-macro',
-            'height': boardHeight
+            'height': board_height
         }
         jsGlobals = {
-            'KANBAN_BOARD_ID': pageName,
-            'TRAC_PROJECT_NAME': projectName,
-            'IS_EDITABLE': isEditable
+            'KANBAN_BOARD_ID': page_name,
+            'TRAC_PROJECT_NAME': project_name,
+            'IS_EDITABLE': is_editable
         }
 
         add_script(formatter.req, 'kbm/js/libs/jquery-1.8.2.js')
@@ -472,3 +456,15 @@ class KanbanBoardMacro(WikiMacroBase):
             data,
             None,
             fragment=True).render(strip_whitespace=False)
+
+    # In: comma-separated list of integers (as string)
+    # Out: list of integers
+    def _parse_id_list(self, ids):
+        result = []
+        parts = ids.split(',')
+        for part in parts:
+            try:
+                result.append(int(part))
+            except ValueError:
+                pass
+        return result
