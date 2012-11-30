@@ -159,6 +159,8 @@ li.kanban-card .id-label
     list-style: none;
     margin: 0;
     padding: 0;
+    max-height: 20em;
+    overflow: auto;
 }
 
 #ticketDialog .log-list li
