@@ -21,93 +21,55 @@
         </ul>
     </div>
     <div id="ticketDialog" data-bind="with: dialogTicket" style="display: none;">
-        <table class="ticket-table">
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('summary')">summary</td>
-                <td colspan="3"><input type="text" data-bind="value: summary, enable: IS_EDITABLE" /></td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('status')">status</td>
-                <td>
-                    <select data-bind="options: $$root.ticketFieldOptions['status'], value: status, enable: IS_EDITABLE">status</select>
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('priority')">priority</td>
-                <td data-bind="if: $$data.priority">
-                    <select data-bind="options: $$root.ticketFieldOptions['priority'], value: priority, enable: IS_EDITABLE">priority</select>
-                </td>
-                <td data-bind="text: $$root.fieldLabel('type')">type</td>
-                <td data-bind="if: $$data.type">
-                    <select data-bind="options: $$root.ticketFieldOptions['type'], value: type, enable: IS_EDITABLE">type</select>
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('time')">time</td>
-                <td  data-bind="if: $$data.time">
-                    <span data-bind="readableDate: time">time</span>
-                </td>
-                <td data-bind="text: $$root.fieldLabel('changetime')">changetime</td>
-                <td data-bind="if: $$data.changetime">
-                    <span data-bind="readableDate: changetime">changetime</span>
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('reporter')">reporter</td>
-                <td data-bind="if: $$data.reporter">
-                    <input type="text" data-bind="value: reporter, enable: IS_EDITABLE" />
-                </td>
-                <td data-bind="text: $$root.fieldLabel('owner')">owner</td>
-                <td data-bind="if: $$data.owner">
-                    <input type="text" data-bind="value: owner, enable: IS_EDITABLE" />
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('milestone')">milestone</td>
-                <td data-bind="if: typeof $$data.milestone !== 'undefined'">
-                    <select data-bind="options: $$root.ticketFieldOptions['milestone'], value: milestone, enable: IS_EDITABLE">milestone</select>
-                </td>
-                <td data-bind="text: $$root.fieldLabel('component')">component</td>
-                <td data-bind="if: $$data.component">
-                    <select data-bind="options: $$root.ticketFieldOptions['component'], value: component, enable: IS_EDITABLE">component</select>
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('version')">version</td>
-                <td data-bind="if: typeof $$data.version !== 'undefined'">
-                    <select data-bind="options: $$root.ticketFieldOptions['version'], value: version, enable: IS_EDITABLE">version</select>
-                </td>
-                <td data-bind="text: $$root.fieldLabel('resolution')">resolution</td>
-                <td data-bind="if: $$data.resolution">
-                    <select data-bind="options: $$root.ticketFieldOptions['resolution'], value: resolution, enable: IS_EDITABLE">resolution</select>
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('keywords')">keywords</td>
-                <td data-bind="if: typeof $$data.keywords !== 'undefined'">
-                    <input type="text" data-bind="value: keywords, enable: IS_EDITABLE" />
-                </td>
-                <td data-bind="text: $$root.fieldLabel('cc')">cc</td>
-                <td data-bind="if: typeof $$data.cc !== 'undefined'">
-                    <input type="text" data-bind="value: cc, enable: IS_EDITABLE" />
-                </td>
-            </tr>
-            <tr>
-                <td data-bind="text: $$root.fieldLabel('description')" style="vertical-align: top;">description</td>
-                <td colspan="3" data-bind="if: typeof $$data.description !== 'undefined'">
-                    <textarea data-bind="value: description, enable: IS_EDITABLE">description</textarea>
-                </td>
-            </tr>
-        </table>
-        <div data-bind="if: $$data.changelog">
-            <div id="logTitle" data-bind="click: function() { $('#logList').toggle(); }">Change history</div>
-            <ul id="logList" data-bind="foreach: changelog" style="display: none;">
-                <li>
-                    <span data-bind="readableDate: time">time</span>
-                    <span data-bind="text: author">author</span>
-                    <span data-bind="text: field">field</span>
-                </li>
-            </ul>
+        <div>
+            <span data-bind="if: $$data.time" class="date-time">
+                <span data-bind="text: $$root.fieldLabel('time')">time</span>
+                <span data-bind="readableDate: time">time</span>
+            </span>
+            <span data-bind="if: $$data.changetime" class="float-right date-time">
+                <span data-bind="text: $$root.fieldLabel('changetime')">changetime</span>
+                <span data-bind="readableDate: changetime">changetime</span>
+            </span>
+        </div>
+        <div class="summary-container">
+            <input type="text" class="dialog-summary-input" data-bind="value: summary, enable: IS_EDITABLE" />
+        </div>
+        <table class="field-table">&nbsp;</table>
+        <div class="section-container" data-bind="if: typeof $$data.description !== 'undefined'">
+            <div class="section-title" data-bind="click: $$root.toggleSection">
+                Description
+                <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>
+            </div>
+            <div class="section-content">
+                <textarea class="description-area" data-bind="value: description, enable: IS_EDITABLE">&nbsp;</textarea>
+            </div>
+        </div>
+        <div class="section-container" data-bind="if: $$data.changelog">
+            <div class="section-title" data-bind="click: $$root.toggleSection">
+                Change history
+                <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>
+            </div>
+            <div class="section-content">
+                <ul class="log-list" data-bind="foreach: changelog">
+                    <li>
+                        <div class="log-header">
+                            <span class="date-time" data-bind="readableDate: time">&nbsp;</span>
+                            <span class="date-time">by</span>
+                            <span class="date-time" data-bind="text: author">&nbsp;</span>
+                        </div>
+                        <div class="log-changes" data-bind="changelogEntry: changes">&nbsp;</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="section-container">
+            <div class="section-title" data-bind="click: $$root.toggleSection">
+                Comment
+                <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>
+            </div>
+            <div class="section-content comment-content">
+                <textarea class="comment-area" data-bind="value: comment, enable: IS_EDITABLE">&nbsp;</textarea>
+            </div>
         </div>
     </div>
     <div id="queryDialog" style="display: none;">

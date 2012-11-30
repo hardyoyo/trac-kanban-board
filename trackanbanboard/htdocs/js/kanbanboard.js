@@ -8,8 +8,14 @@ kanban.Ticket = function(data) {
         copy: ['id']
     }, this);
 
+    this.comment = ko.observable('');
+
     this.idString = ko.computed(function() {
         return '#' + self.id;
+    });
+
+    this.link = ko.computed(function() {
+        return '/' + TRAC_PROJECT_NAME + '/ticket/' + self.id;
     });
 
     this.modifiedFields = [];
@@ -118,10 +124,12 @@ kanban.Board = function(data) {
     this.setTicketFieldOptions = function(fieldName, options) {
         console.log('setTicketFieldOptions:', fieldName, options);
 
-        // Add the "not defined" option
+        // Add the "not defined" option.
+        // Trac defines status to be optional but kanban board requires it to be always set.
         for (var i in kanban.metadata.ticketFields) {
-            if (fieldName == kanban.metadata.ticketFields[i].name &&
-                kanban.metadata.ticketFields[i].kanbanOptional) {
+            if (fieldName != 'status' &&
+                fieldName == kanban.metadata.ticketFields[i].name &&
+                kanban.metadata.ticketFields[i].optional) {
                 options.unshift('');
             }
         }
@@ -241,7 +249,7 @@ kanban.Board = function(data) {
         var $dialogDiv = $('#ticketDialog');
         kanban.ticketDialog = $dialogDiv.dialog({
             modal: true,
-            title: 'Ticket ' + self.dialogTicket().idString,
+            title: '<a href="' + self.dialogTicket().link + '">' + 'Ticket ' + self.dialogTicket().idString + '</a>',
             minWidth: 600,
             buttons: buttons
         });
@@ -268,10 +276,16 @@ kanban.Board = function(data) {
         for (var i in kanban.metadata.ticketFields) {
             var fieldName = kanban.metadata.ticketFields[i].name;
             if (fieldName == 'time' || fieldName == 'changetime') continue;
-            if (self.dialogTicket()[fieldName] != originalTicket[fieldName]()) {
+            if (self.dialogTicket()[fieldName] &&
+                self.dialogTicket()[fieldName] != originalTicket[fieldName]()) {
                 originalTicket.setField(fieldName, self.dialogTicket()[fieldName]);
                 modified = true;
             }
+        }
+
+        if (self.dialogTicket().comment) {
+            originalTicket.setField('comment', self.dialogTicket().comment);
+            modified = true;
         }
 
         if (modified) {
@@ -288,6 +302,7 @@ kanban.Board = function(data) {
                 function() {console.log("update error")});
 
             originalTicket.modifiedFields = [];
+            originalTicket.comment('');
             ticketColumn.modifiedFields = [];
         }
     };
@@ -320,6 +335,11 @@ kanban.Board = function(data) {
                 self.updateData(data);
             },
             function() {console.log("remove error")});
+    };
+
+    /* Toggles ticket detail dialog section (description, changelog, comment) visibility*/
+    this.toggleSection = function(data, event) {
+        $(event.target).siblings('.section-content').slideToggle(300);
     };
 };
 
@@ -383,7 +403,11 @@ kanban.onDataFetchError = function(jqXHR, textStatus, error) {
 };
 
 $(document).ready(function(){
-    console.log("Document ready. Board ID: " + KANBAN_BOARD_ID + ", " + (IS_EDITABLE ? "editable" : "read-only"));
+    console.log(
+        "Document ready. Board ID:",
+        KANBAN_BOARD_ID,
+        (IS_EDITABLE ? "editable" : "read-only"),
+        TICKET_FIELDS);
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
     kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
@@ -395,6 +419,11 @@ $(document).ready(function(){
         function(data) {
             kanban.metadata = data;
             console.log(kanban.metadata);
+
+            if (TICKET_FIELDS && data && data.ticketFields) {
+                kanban.createTicketFields($('.field-table'), TICKET_FIELDS, data.ticketFields);
+            }
+
             kanban.request(
                 kanban.DATA_URL,
                 'GET',
@@ -407,3 +436,60 @@ $(document).ready(function(){
         }
     );
 });
+
+/* Add user defined ticket fields to detail dialog template. */
+kanban.createTicketFields = function($table, fieldString, validFields) {
+    fieldList = fieldString.split(',');
+
+    var html = [];
+    for (var i in fieldList) {
+        var fieldName = fieldList[i];
+        var fieldDef = null;
+        for (var j in validFields) {
+            if (validFields[j].name == fieldName) fieldDef = validFields[j];
+        }
+        if (!fieldDef) {
+            console.error('Invalid field:', fieldName);
+            continue;
+        }
+
+        if (i % 2 == 0) {
+            html.push('<tr>');
+        }
+
+        html.push('<td>');
+        html.push('<span data-bind="text: $root.fieldLabel(\'');
+        html.push(fieldName);
+        html.push('\')">&nbsp;</span>');
+        html.push('</td>');
+
+        html.push('<td data-bind="if: typeof $data.');
+        html.push(fieldName);
+        html.push(' !== \'undefined\'">');
+
+        switch (fieldDef.type) {
+            case 'text':
+            case 'textarea':
+                html.push('<input type="text" data-bind="enable: IS_EDITABLE, value: ');
+                html.push(fieldName);
+                html.push('" />');
+                break;
+
+            case 'select':
+            case 'radio':
+                html.push('<select data-bind="enable: IS_EDITABLE, value: ');
+                html.push(fieldName);
+                html.push(', options: $root.ticketFieldOptions[\'');
+                html.push(fieldName);
+                html.push('\']">&nbsp;</select>');
+                break;
+        }
+
+        html.push('</td>');
+
+        if (i % 2 == 1) {
+            html.push('</tr>');
+        }
+    }
+    $table.append(html.join(''));
+};

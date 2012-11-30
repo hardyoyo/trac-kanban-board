@@ -16,16 +16,61 @@ from trac.wiki.macros import WikiMacroBase
 from trac.wiki.model import WikiPage
 
 
+class KanbanError(Exception):
+    """Base class for all Kanban board exceptions."""
+    pass
+
+
+class InvalidDataError(KanbanError):
+    """Raised when board data can not be found or parsed."""
+    def __init__(self, msg):
+        self.msg = msg
+
+
+class InvalidFieldError(KanbanError):
+    """Raised when invalid ticket field definition is detected."""
+    def __init__(self, fields):
+        self.fields = fields
+
+
 class KanbanBoard:
     data_start_regexp = re.compile('\s*({{{)?#!KanbanBoard')
     data_end_regexp = re.compile('\s*}}}')
 
-    def __init__(self, name, detailed_tickets, env, logger):
+    # These are ticket fields that must be present on all tickets
+    mandatory_fields = ['summary', 'status']
+
+    # These ticket fields are shown in detail dialog regardless of user's field definitions
+    always_shown_fields = ['summary', 'description', 'time', 'changetime']
+
+    def __init__(self, name, detailed_tickets, ticket_fields, env, logger):
         self.name = name
         self.env = env
         self.log = logger
-        self.columns = self.load_wiki_data(self.name)['columns']
+
+        # List of valid ticket fields and options as returned by TicketSystem.get_ticket_fields()
+        self.ticket_fields = ticket_fields
+
+        data = self.load_wiki_data(self.name)
+        if 'fields' in data:
+            invalid_fields = self.get_invalid_fields(data['fields'], self.ticket_fields)
+            if invalid_fields:
+                raise InvalidFieldError(invalid_fields)
+            self.fields = []
+            for field_name in data['fields']:
+                if field_name not in self.always_shown_fields:
+                    self.fields.append(field_name)
+        else:
+            self.fields = []
+
+        if 'columns' in data and data['columns']:
+            self.columns = data['columns']
+        else:
+            raise InvalidDataError('No columns defined')
+
+        # Map of ticket status names to matching column IDs
         self.status_map = self.get_status_to_column_map(self.columns)
+
         self.tickets = self.fetch_tickets(detailed_tickets)
 
     # Adds tickets given in "ids" to the board but not necessarily in right column.
@@ -88,7 +133,7 @@ class KanbanBoard:
         page = WikiPage(self.env, page_name)
         if not page.exists:
             self.log.error('Wiki page "%s" doesn\'t exist' % page_name)
-            return None
+            raise InvalidDataError('Wiki page doesn\'t exist')
 
         lines = page.text.split('\n')
         first = -1
@@ -106,9 +151,18 @@ class KanbanBoard:
                     data_lines.append(line)
 
         if last > 0:
-            return json.loads('\n'.join(data_lines))
+            if data_lines:
+                try:
+                    return json.loads('\n'.join(data_lines))
+                except ValueError:
+                    raise InvalidDataError('Invalid JSON data')
+            else:
+                raise InvalidDataError('Empty data')
 
-        return None
+        if first < 0:
+            raise InvalidDataError('First line of data not found')
+
+        raise InvalidDataError('Last line of data not found')
 
     def save_wiki_data(self, req):
         self.log.debug('KanbanBoard::save_wiki_data')
@@ -128,7 +182,7 @@ class KanbanBoard:
                 new_lines.append(line)
                 if self.data_start_regexp.match(line):
                     first = index + 1
-                    new_lines.append(self.get_json(False))
+                    new_lines.append(self.get_json(False, True))
             elif last < 0:
                 if self.data_end_regexp.match(line):
                     last = index - 1
@@ -154,10 +208,6 @@ class KanbanBoard:
     def fetch_tickets(self, detailed):
         self.log.debug('KanbanBoard::fetch_tickets')
 
-        fields = []
-        if len(detailed) > 0:
-            fields = TicketSystem(self.env).get_ticket_fields()
-
         tickets = {}
         ids = self.get_ticket_ids()
         for id in ids:
@@ -168,40 +218,66 @@ class KanbanBoard:
                 self.log.error('Failed to fetch ticket %d' % id)
                 continue
 
+            # Get mandatory fields
+            for field_name in self.mandatory_fields:
+                t[field_name] = ticket.get_value_or_default(field_name)
+
             if id in detailed:
-                for field in fields:
-                    t[field['name']] = ticket.get_value_or_default(field['name'])
+                # Get fields that are are always shown in detail dialog
+                for field_name in self.always_shown_fields:
+                    if field_name not in t:
+                        t[field_name] = ticket.get_value_or_default(field_name)
 
-                t['time'] = to_timestamp(ticket['time']) * 1000
-                t['changetime'] = to_timestamp(ticket['changetime']) * 1000
+                # Get user specified extra fields
+                for field_name in self.fields:
+                    if field_name not in self.mandatory_fields:
+                        t[field_name] = ticket.get_value_or_default(field_name)
 
+                # Convert DateTimes to (millisecond) timestamps
+                if 'time' in t:
+                    t['time'] = to_timestamp(t['time']) * 1000
+                if 'changetime' in t:
+                    t['changetime'] = to_timestamp(t['changetime']) * 1000
+
+                # Get changes and comments and group changes from same action together
                 t['changelog'] = []
                 changelog = ticket.get_changelog()
+                time_entry = None
                 for log_item in changelog:
-                    item = {}
-                    item['time'] = to_timestamp(log_item[0]) * 1000
-                    item['author'] = log_item[1]
-                    item['field'] = log_item[2]
-                    item['oldValue'] = log_item[3]
-                    item['newValue'] = log_item[4]
-                    item['permanent'] = log_item[5]
-                    t['changelog'].append(item)
-            else:
-                t['summary'] = ticket.get_value_or_default('summary')
-                t['status'] = ticket.get_value_or_default('status')
+                    current_time = to_timestamp(log_item[0]) * 1000
+                    if time_entry is None or time_entry['time'] < current_time:
+                        if time_entry is not None:
+                            t['changelog'].append(time_entry)
+                        time_entry = {}
+                        time_entry['time'] = current_time
+                        time_entry['author'] = log_item[1]
+                        time_entry['changes'] = []
+
+                    change_entry = {}
+                    change_entry['field'] = log_item[2]
+                    change_entry['oldValue'] = log_item[3]
+                    change_entry['newValue'] = log_item[4]
+                    time_entry['changes'].append(change_entry)
+
+                if time_entry is not None:
+                    t['changelog'].append(time_entry)
 
             tickets[str(id)] = t
 
         return tickets
 
-    def get_json(self, include_tickets):
+    def get_json(self, include_tickets, include_fields):
         """Return JSON representation of the board.
            If 'includeTickets' is True, each column's 'tickets' property contains ticket objects.
            If False, 'tickets' property is list of ticket IDs.
         """
         result = ''
+        jason = {}
+        indent = 0
+        if include_fields and self.fields:
+            jason['fields'] = self.fields
         if include_tickets:
-            jason = { 'columns': [] }
+            jason['columns'] = []
             for col in self.columns:
                 colcopy = copy.deepcopy(col)
                 colcopy['tickets'] = []
@@ -211,11 +287,11 @@ class KanbanBoard:
                     except KeyError:
                         pass
                 jason['columns'].append(colcopy)
-            result = json.dumps(jason)
         else:
-            result = json.dumps({ 'columns': self.columns }, sort_keys=True, indent=2)
+            jason['columns'] = self.columns
+            indent = 2
 
-        self.log.debug('KanbanBoard::get_json: %s' % result)
+        result = json.dumps(jason, sort_keys=(indent > 0), indent=indent)
         return result
 
     def get_ticket_ids(self):
@@ -266,6 +342,19 @@ class KanbanBoard:
         if (modified and save_changes) or force_save:
             self.save_wiki_data(request)
 
+    def get_field_string(self):
+        if self.fields:
+            return ','.join(self.fields)
+        return ''
+
+    def get_invalid_fields(self, fields, valid_fields):
+        valid_names = map(lambda x: x['name'], valid_fields)
+        invalid_fields = []
+        for field_name in fields:
+            if field_name not in valid_names:
+                invalid_fields.append(field_name)
+        return invalid_fields
+
 class KanbanBoardMacro(WikiMacroBase):
     """
     Usage:
@@ -278,6 +367,9 @@ class KanbanBoardMacro(WikiMacroBase):
         { "id": 1, "name": "New", "states": ["new"], "tickets": [100, 124, 103], "wip": 5 },
         { "id": 2, "name": "Ongoing", "states": ["assigned", "accepted", "reopened"], "tickets": [], "wip": 3 },
         { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
+      ],
+      "fields": [
+        "status", "priority", "keywords"
       ]
     }
     }}}
@@ -287,26 +379,34 @@ class KanbanBoardMacro(WikiMacroBase):
     ||= Key  =||= Description                       =||= Example    =||= Default =||
     || height || Board height in css-accepted format || height=400px || 300px     ||
 
-    Macro name and optional arguments must be followed by board configuration. Configuration is in JSON format and consists of list of columns where each column must have following properties:
+    Macro name and optional arguments must be followed by board configuration. Configuration
+    is in JSON format and consists of list of columns and optionally list of ticket fields.
+    Each column must have following properties:
     || id || Unique number. ||
     || name || Column name. ||
     || states || List of ticket states which map to this column. For example in example configuration above if the status of ticket #100 changes to "accepted" it moves to middle column (named "Ongoing"). If ticket is dragged to middle column its status changes to first state on this list ("assigned"). ||
     || tickets || List of initial tickets in the column. This list is updated by the macro when ticket status changes. ||
     || wip || Work-in-progress limit for the column. ||
+
+    The "fields" property defines which ticket fields are shown on the ticket detail dialog.
+    Valid field names on default Trac environment are: "reporter", "owner", "status",
+    "type", "priority", "milestone", "component", "version", "resolution", "keywords" and "cc".
     """
 
     implements(ITemplateProvider, IRequestHandler)
 
     request_regexp = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
 
-    # Ticket fields that can should have "not defined" option
-    kanban_optional_fields = ['milestone', 'version']
+    ticket_fields = []
 
-    def save_ticket(self, ticket_data, author, comment=''):
+    def save_ticket(self, ticket_data, author):
         self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticket_data['id'], author))
         ticket = model.Ticket(self.env, ticket_data['id'])
+        comment = ''
         for key, value in ticket_data.items():
-            if key != 'id':
+            if key == 'comment':
+                comment = value
+            elif key != 'id':
                 ticket[key] = value
         ticket.save_changes(author, comment)
 
@@ -345,10 +445,7 @@ class KanbanBoardMacro(WikiMacroBase):
         if board_id is None:
             self.log.debug('=== Get metadata')
             meta_data = {}
-            meta_data['ticketFields'] = TicketSystem(self.env).get_ticket_fields()
-            for field in meta_data['ticketFields']:
-                if field['name'] in self.kanban_optional_fields:
-                    field['kanbanOptional'] = True
+            meta_data['ticketFields'] = self.ticket_fields
             return req.send(json.dumps(meta_data), content_type='application/json')
 
         arg_list = parse_arg_list(req.query_string)
@@ -366,7 +463,7 @@ class KanbanBoardMacro(WikiMacroBase):
         self.log.debug('Added tickets: %s' % repr(added_tickets))
         self.log.debug('Removed tickets: %s' % repr(removed_tickets))
 
-        board = KanbanBoard(board_id, detailed_tickets, self.env, self.log)
+        board = KanbanBoard(board_id, detailed_tickets, self.ticket_fields, self.env, self.log)
 
         added = 0
         if len(added_tickets) > 0:
@@ -383,7 +480,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
         if req.method == 'GET':
             self.log.debug('=== Get all columns')
-            return req.send(board.get_json(True), content_type='application/json')
+            return req.send(board.get_json(True, False), content_type='application/json')
         else:
             self.log.debug('=== Update columns (and tickets)')
             columnData = json.loads(req.read())
@@ -398,7 +495,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
             board.update_tickets()
             board.fix_ticket_columns(req, True, True)
-            return req.send(board.get_json(True), content_type='application/json')
+            return req.send(board.get_json(True, False), content_type='application/json')
 
     def get_templates_dirs(self):
         from pkg_resources import resource_filename
@@ -409,51 +506,63 @@ class KanbanBoardMacro(WikiMacroBase):
         return [('trackanbanboard', os.path.abspath(resource_filename('trackanbanboard', 'htdocs')))]
 
     def expand_macro(self, formatter, name, text, args):
-        if text is None:
-            data = {
-                'error': 'Board data is not defined',
-                'usage': format_to_html(self.env, formatter.context, self.__doc__)
-            }
-            add_stylesheet(formatter.req, 'trackanbanboard/css/kanbanboard.css')
-            return Chrome(self.env).render_template(formatter.req,
-                'kanbanerror.html',
-                data,
-                None,
-                fragment=True).render(strip_whitespace=False)
+        template_data = {'css_class': 'trac-kanban-board-macro'}
+        template_file = 'kanbanboard.html'
+        board = None
 
         self.log.debug(args)
-        board_height = '300px'
+        template_data['height'] = '300px'
         if args:
-            board_height = args.get('height', '300px')
+            template_data['height'] = args.get('height', '300px')
 
         project_name = self.env.path.split('/')[-1]
         page_name = formatter.req.path_info.split('/')[-1]
         is_editable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
 
-        data = {
-            'css_class': 'trac-kanban-board-macro',
-            'height': board_height
-        }
-        jsGlobals = {
+        js_globals = {
             'KANBAN_BOARD_ID': page_name,
             'TRAC_PROJECT_NAME': project_name,
             'IS_EDITABLE': is_editable
         }
 
-        add_script(formatter.req, 'trackanbanboard/js/libs/jquery-1.8.2.js')
-        add_script(formatter.req, 'trackanbanboard/js/libs/jquery-ui-1.9.1.custom.min.js')
-        add_script(formatter.req, 'trackanbanboard/js/libs/knockout-2.2.0.js')
-        add_script(formatter.req, 'trackanbanboard/js/libs/knockout.mapping.js')
-        add_script(formatter.req, 'trackanbanboard/js/libs/knockout-sortable.min.js')
-        add_script(formatter.req, 'trackanbanboard/js/kanbanutil.js')
-        add_script(formatter.req, 'trackanbanboard/js/kanbanboard.js')
-        add_script_data(formatter.req, jsGlobals)
-        add_stylesheet(formatter.req, 'trackanbanboard/css/jquery-ui-1.9.1.custom.min.css')
+        self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
+
+        if text is None:
+            template_data['error'] = 'Board data is not defined'
+            template_data['usage'] = format_to_html(self.env, formatter.context, self.__doc__)
+        else:
+            try:
+                board = KanbanBoard(page_name, [], self.ticket_fields, self.env, self.log)
+            except InvalidDataError as e:
+                template_data['error'] = e.msg
+                template_data['usage'] = format_to_html(self.env, formatter.context, self.__doc__)
+            except InvalidFieldError as e:
+                template_data['error'] = 'Invalid ticket fields: %s' % ', '.join(e.fields)
+                valid_fields = map(lambda x: x['name'], self.ticket_fields)
+                template_data['usage'] = 'Valid field names are: %s.' % ', '.join(valid_fields)
+
+        if board:
+            # TICKET_FIELDS is comma-separated list of user defined ticket field names
+            js_globals['TICKET_FIELDS'] = board.get_field_string()
+
         add_stylesheet(formatter.req, 'trackanbanboard/css/kanbanboard.css')
+        add_script_data(formatter.req, js_globals)
+
+        if 'error' in template_data:
+            template_file = 'kanbanerror.html'
+        else:
+            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-1.8.2.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-ui-1.9.1.custom.min.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/knockout-2.2.0.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/knockout.mapping.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/knockout-sortable.min.js')
+            add_script(formatter.req, 'trackanbanboard/js/kanbanutil.js')
+            add_script(formatter.req, 'trackanbanboard/js/kanbanboard.js')
+            add_stylesheet(formatter.req, 'trackanbanboard/css/jquery-ui-1.9.1.custom.min.css')
 
         return Chrome(self.env).render_template(formatter.req,
-            'kanbanboard.html',
-            data,
+            template_file,
+            template_data,
             None,
             fragment=True).render(strip_whitespace=False)
 
@@ -468,3 +577,4 @@ class KanbanBoardMacro(WikiMacroBase):
             except ValueError:
                 pass
         return result
+

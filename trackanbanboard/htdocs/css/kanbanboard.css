@@ -1,7 +1,22 @@
+.date-time
+{
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.float-right
+{
+    float: right;
+}
+
 .board-container
 {
 }
 
+/*
+ * Columns
+ */
 .kanban-column-container
 {
     width: 100%;
@@ -29,13 +44,10 @@
     color: #cd0a0a;
 }
 
-.date-time
-{
-    color: #666;
-    font-size: 0.9em;
-    font-style: italic;
-}
 
+/*
+ * Cards
+ */
 ul.card-list
 {
     list-style: none;
@@ -70,48 +82,108 @@ li.kanban-card .id-label
     color: #cd0a0a;
 }
 
-#ticketDialog .ticket-table
+
+/*
+ * Ticket details dialog
+ */
+#ticketDialog input,
+#ticketDialog textarea,
+#ticketDialog select
 {
-    width: 95%;
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+#ticketDialog .summary-container
+{
+    padding-top: 1em;
+}
+
+#ticketDialog .dialog-summary-input
+{
+    margin: 0;
+}
+
+#ticketDialog .field-table
+{
+    width: 100%;
     border-collapse: collapse;
 }
 
-#ticketDialog .ticket-table td
+#ticketDialog .field-table td:nth-child(odd)
 {
-    padding: 0.5em;
-}
-
-#ticketDialog .ticket-table td:nth-child(odd)
-{
-    color: rgba(0, 0, 0, 0.6);;
-    background-color: rgb(255, 247, 174);
+    color: #777777;
     text-align: right;
 }
 
-#ticketDialog .ticket-table td:nth-child(3)
+#ticketDialog .description-area
+{
+    height: 10em;
+}
+
+#ticketDialog .comment-area
+{
+    height: 5em;
+}
+
+#ticketDialog .section-title
+{
+    cursor: pointer;
+    font-size: 1em;
+    color: #777777;
+    margin-top: 1em;
+    padding: 0.3em;
+    background-color: #eeeeee;
+}
+
+#ticketDialog .section-title:hover
+{
+    background-color: #dddddd;
+}
+
+#ticketDialog .section-content
+{
+    display: none;
+}
+
+#ticketDialog .section-content.comment-content
+{
+    display: block;
+}
+
+#ticketDialog .log-list
+{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#ticketDialog .log-list li
+{
+    padding-top: 0.5em;
+}
+
+#ticketDialog .log-list .log-changes
 {
     padding-left: 1em;
 }
 
-#ticketDialog .ticket-table input,
-#ticketDialog .ticket-table textarea,
-#ticketDialog .ticket-table select
+#ticketDialog .log-list .log-field
 {
-    width: 90%;
+    font-weight: bold;
 }
 
-#logTitle
+#ticketDialog .log-list .log-value
 {
-    cursor: pointer;
-    font-size: 1.2em;
-    margin-top: 1em;
+    font-style: italic;
 }
 
-#logTitle:hover
-{
-    background-color: rgb(255, 247, 174);
-}
-
+/*
+ * Ticket adding/query dialog
+ */
 #queryFrame
 {
     width: 100%;
@@ -119,6 +191,10 @@ li.kanban-card .id-label
     border-width: 0;
 }
 
+
+/*
+ * Error page
+ */
 .error-container
 {
     border: 1px solid #aaaaaa;
