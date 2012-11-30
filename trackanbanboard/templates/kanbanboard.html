@@ -62,13 +62,13 @@
                 </ul>
             </div>
         </div>
-        <div class="section-container">
+        <div class="section-container" data-bind="if: IS_EDITABLE">
             <div class="section-title" data-bind="click: $$root.toggleSection">
                 Comment
                 <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>
             </div>
             <div class="section-content comment-content">
-                <textarea class="comment-area" data-bind="value: comment, enable: IS_EDITABLE">&nbsp;</textarea>
+                <textarea class="comment-area" data-bind="value: comment">&nbsp;</textarea>
             </div>
         </div>
     </div>
