@@ -39,10 +39,7 @@ kanbanutil.getTicketIdFromDropEvent = function(event, projectName) {
 
     if (url) {
         var re = new RegExp('\\/' + projectName + '\\/ticket\\/(\\d+)');
-        console.log('re:', re.source);
         var match = url.match(re);
-        console.log(match);
-
         if (match && match.length == 2) {
             id = parseInt(match[1]);
         }
@@ -72,24 +69,24 @@ ko.bindingHandlers.changelogEntry = {
         var comment = '';
         var html = [];
         for (var i in changeList) {
-            if (changeList[i].field == 'comment') {
-                comment = changeList[i].newValue;
+            if (changeList[i].field() == 'comment') {
+                comment = changeList[i].newValue();
             } else {
                 html.push('<div class="log-change">');
                 html.push('<span class="log-field">');
-                html.push(changeList[i].field);
+                html.push(changeList[i].field());
                 html.push('</span>');
 
-                if (changeList[i].field == 'description') {
+                if (changeList[i].field() == 'description') {
                     html.push('&nbsp;modified');
                 } else {
                     html.push('&nbsp;changed&nbsp;from&nbsp;');
                     html.push('<span class="log-value">');
-                    html.push(changeList[i].oldValue);
+                    html.push(changeList[i].oldValue());
                     html.push('</span>');
                     html.push('&nbsp;to&nbsp;');
                     html.push('<span class="log-value">');
-                    html.push(changeList[i].newValue);
+                    html.push(changeList[i].newValue());
                     html.push('</span>');
                 }
                 html.push('</div>');

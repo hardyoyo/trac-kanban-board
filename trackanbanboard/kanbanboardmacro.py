@@ -273,7 +273,7 @@ class KanbanBoard:
         """
         result = ''
         jason = {}
-        indent = 0
+        indent = None
         if include_fields and self.fields:
             jason['fields'] = self.fields
         if include_tickets:
@@ -291,7 +291,7 @@ class KanbanBoard:
             jason['columns'] = self.columns
             indent = 2
 
-        result = json.dumps(jason, sort_keys=(indent > 0), indent=indent)
+        result = json.dumps(jason, sort_keys=(indent is not None), indent=indent)
         return result
 
     def get_ticket_ids(self):
@@ -395,20 +395,34 @@ class KanbanBoardMacro(WikiMacroBase):
 
     implements(ITemplateProvider, IRequestHandler)
 
-    request_regexp = re.compile('\/kanbanboard\/(?P<bid>\w+)?')
+    request_regexp = re.compile('\/kanbanboard\/((?P<bid>\w+)(?P<new>\/newticket)?)?')
 
     ticket_fields = []
 
     def save_ticket(self, ticket_data, author):
-        self.log.debug('KanbanBoardMacro::save_ticket: %d %s' % (ticket_data['id'], author))
-        ticket = model.Ticket(self.env, ticket_data['id'])
+        """If ticket_data contains an ID, modifies defined fields in that ticket.
+           If not, creates new ticket. Returns the ID of new/modified ticket."""
+        self.log.debug('KanbanBoardMacro::save_ticket: %s' % repr(ticket_data))
+
+        id = None
         comment = ''
+
+        if 'id' in ticket_data:
+            id = ticket_data['id']
+        ticket = model.Ticket(self.env, id)
+
         for key, value in ticket_data.items():
             if key == 'comment':
                 comment = value
             elif key != 'id':
                 ticket[key] = value
-        ticket.save_changes(author, comment)
+        if id:
+            ticket.save_changes(author, comment)
+        else:
+            ticket.insert()
+            id = ticket.id
+
+        return id
 
     def match_request(self, req):
         return self.request_regexp.match(req.path_info)
@@ -421,6 +435,9 @@ class KanbanBoardMacro(WikiMacroBase):
     #
     # POST /kanbanboard/[board ID]
     #      Updates board data and saves ticket changes. Returns board & ticket data.
+    #
+    # POST /kanbanboard/[board ID]/newticket
+    #      Creates new ticket and adds it to the board. Returns board & ticket data.
     #
     # ?tickets=1,2
     #      Instead of minimal ticket data, returns full data for tickets #1 and #2.
@@ -438,9 +455,13 @@ class KanbanBoardMacro(WikiMacroBase):
             return req.send([], content_type='application/json')
 
         board_id = None
+        is_new_ticket = False
         match = self.request_regexp.match(req.path_info)
         if match:
             board_id = match.group('bid')
+            is_new_ticket = match.group('new') is not None
+
+        self.log.debug('new ticket: %s' % is_new_ticket)
 
         if board_id is None:
             self.log.debug('=== Get metadata')
@@ -482,16 +503,23 @@ class KanbanBoardMacro(WikiMacroBase):
             self.log.debug('=== Get all columns')
             return req.send(board.get_json(True, False), content_type='application/json')
         else:
-            self.log.debug('=== Update columns (and tickets)')
-            columnData = json.loads(req.read())
-            for col in columnData:
-                for ticket in col['tickets']:
-                    for key, value in ticket.items():
-                        if key != 'id':
-                            self.save_ticket(ticket, req.authname)
-                            break
+            if is_new_ticket:
+                self.log.debug('=== Create new ticket')
+                ticket_data = json.loads(req.read())
+                id = self.save_ticket(ticket_data, req.authname)
+                self.log.debug('Ticket saved as #%d' % id)
+                board.add_tickets([id])
+            else:
+                self.log.debug('=== Update columns (and tickets)')
+                columnData = json.loads(req.read())
+                for col in columnData:
+                    for ticket in col['tickets']:
+                        for key, value in ticket.items():
+                            if key != 'id':
+                                self.save_ticket(ticket, req.authname)
+                                break
 
-                board.update_column(col)
+                    board.update_column(col)
 
             board.update_tickets()
             board.fix_ticket_columns(req, True, True)
@@ -522,6 +550,7 @@ class KanbanBoardMacro(WikiMacroBase):
         js_globals = {
             'KANBAN_BOARD_ID': page_name,
             'TRAC_PROJECT_NAME': project_name,
+            'TRAC_USER_NAME': formatter.req.authname,
             'IS_EDITABLE': is_editable
         }
 
@@ -577,4 +606,3 @@ class KanbanBoardMacro(WikiMacroBase):
             except ValueError:
                 pass
         return result
-

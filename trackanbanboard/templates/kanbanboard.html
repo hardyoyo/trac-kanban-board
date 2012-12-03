@@ -4,6 +4,7 @@
     <div class="board-container" style="height: $height;">
         <button data-bind="click: $$root.fetchData">Refresh</button>
         <button data-bind="click: $$root.showQueryDialog, enable: IS_EDITABLE">Add tickets</button>
+        <button data-bind="click: $$root.createTicket, enable: IS_EDITABLE">New ticket</button>
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
                 <div>
@@ -49,7 +50,7 @@
                 Change history
                 <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>
             </div>
-            <div class="section-content">
+            <div class="section-content hidden">
                 <ul class="log-list" data-bind="foreach: changelog">
                     <li>
                         <div class="log-header">
@@ -62,7 +63,7 @@
                 </ul>
             </div>
         </div>
-        <div class="section-container" data-bind="if: IS_EDITABLE">
+        <div class="section-container" data-bind="if: $$data.id, visible: IS_EDITABLE">
             <div class="section-title" data-bind="click: $$root.toggleSection">
                 Comment
                 <span class="float-right ui-icon ui-icon-triangle-1-s">v</span>

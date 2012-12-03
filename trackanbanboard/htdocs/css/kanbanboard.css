@@ -10,9 +10,11 @@
     float: right;
 }
 
-.board-container
+.hidden
 {
+    display: none;
 }
+
 
 /*
  * Columns
@@ -142,16 +144,6 @@ li.kanban-card .id-label
 #ticketDialog .section-title:hover
 {
     background-color: #dddddd;
-}
-
-#ticketDialog .section-content
-{
-    display: none;
-}
-
-#ticketDialog .section-content.comment-content
-{
-    display: block;
 }
 
 #ticketDialog .log-list
