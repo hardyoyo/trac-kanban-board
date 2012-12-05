@@ -24,7 +24,7 @@
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 0;
+    padding: 0.5em 0 0 0;
 }
 
 .kanban-column-container li.kanban-column
@@ -41,7 +41,12 @@
     background-color: #eee;
 }
 
-.wip-exceeded
+.kanban-column-container li.kanban-column .column-header
+{
+    padding-top: 0.5em;
+}
+
+.kanban-column-container li.kanban-column .column-header .wip-exceeded
 {
     color: #cd0a0a;
 }
@@ -61,12 +66,12 @@ ul.card-list
 
 li.kanban-card
 {
-    background-color: rgb(255, 247, 174);
-    border: 1px solid rgba(0, 0, 0, 0.3);
+    background-color: #fff7ae;
+    border: 1px solid #bfb983;
     margin: 0.5em;
     padding: 0.5em;
     text-align: left;
-    border-radius: 0.2em;
+    border-radius: 3px;
     box-shadow: 1px 3px 10px 0px rgba(0, 0, 0, 0.5);
     cursor: pointer;
 }
@@ -94,6 +99,7 @@ li.kanban-card .id-label
 {
     width: 100%;
     margin: 0;
+    padding: 3px 4px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
@@ -112,13 +118,16 @@ li.kanban-card .id-label
 #ticketDialog .field-table
 {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 3px;
 }
 
 #ticketDialog .field-table td:nth-child(odd)
 {
     color: #777777;
     text-align: right;
+    vertical-align: middle;
+    padding-right: 0.3em;
 }
 
 #ticketDialog .description-area
@@ -178,10 +187,17 @@ li.kanban-card .id-label
 /*
  * Ticket adding/query dialog
  */
+#queryDialog
+{
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
 #queryFrame
 {
     width: 100%;
-    height: 400px;
+    height: 100%;
     border-width: 0;
 }
 

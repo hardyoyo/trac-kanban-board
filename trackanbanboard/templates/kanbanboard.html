@@ -9,7 +9,7 @@
         </div>
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">
-                <div>
+                <div class="column-header">
                     <span data-bind="text: name">name</span>
                     <span>&ndash;</span>
                     <span data-bind="text: tickets().length + '/' + wip(), css: {'wip-exceeded': tickets().length > wip()}">wip</span>

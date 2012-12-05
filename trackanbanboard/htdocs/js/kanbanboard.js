@@ -315,7 +315,8 @@ kanban.Board = function(data) {
         var $dialogDiv = $('#queryDialog');
         kanban.queryDialog = $dialogDiv.dialog({
             title: 'Drag and drop ticket links to Kanban board',
-            minWidth: 600,
+            width: 600,
+            height: 400,
             position: 'right'
         });
     };
