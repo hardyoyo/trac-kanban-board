@@ -537,7 +537,7 @@ class KanbanBoardMacro(WikiMacroBase):
         return [('trackanbanboard', os.path.abspath(resource_filename('trackanbanboard', 'htdocs')))]
 
     def expand_macro(self, formatter, name, text, args):
-        template_data = {'css_class': 'trac-kanban-board-macro'}
+        template_data = {'css_class': 'trac-kanban-board'}
         template_file = 'kanbanboard.html'
         board = None
 
@@ -584,14 +584,14 @@ class KanbanBoardMacro(WikiMacroBase):
         if 'error' in template_data:
             template_file = 'kanbanerror.html'
         else:
-            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-1.8.2.js')
-            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-ui-1.9.1.custom.min.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-1.8.3.js')
+            add_script(formatter.req, 'trackanbanboard/js/libs/jquery-ui-1.9.2.custom.min.js')
             add_script(formatter.req, 'trackanbanboard/js/libs/knockout-2.2.0.js')
             add_script(formatter.req, 'trackanbanboard/js/libs/knockout.mapping.js')
             add_script(formatter.req, 'trackanbanboard/js/libs/knockout-sortable.min.js')
             add_script(formatter.req, 'trackanbanboard/js/kanbanutil.js')
             add_script(formatter.req, 'trackanbanboard/js/kanbanboard.js')
-            add_stylesheet(formatter.req, 'trackanbanboard/css/jquery-ui-1.9.1.custom.min.css')
+            add_stylesheet(formatter.req, 'trackanbanboard/css/jquery-ui-1.9.2.custom.min.css')
 
         return Chrome(self.env).render_template(formatter.req,
             template_file,
@@ -610,3 +610,4 @@ class KanbanBoardMacro(WikiMacroBase):
             except ValueError:
                 pass
         return result
+
