@@ -463,6 +463,9 @@ class KanbanBoardMacro(WikiMacroBase):
 
         self.log.debug('new ticket: %s' % is_new_ticket)
 
+        if not self.ticket_fields:
+            self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
+
         if board_id is None:
             self.log.debug('=== Get metadata')
             meta_data = {}
@@ -554,7 +557,8 @@ class KanbanBoardMacro(WikiMacroBase):
             'IS_EDITABLE': is_editable
         }
 
-        self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
+        if not self.ticket_fields:
+            self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
 
         if text is None:
             template_data['error'] = 'Board data is not defined'
