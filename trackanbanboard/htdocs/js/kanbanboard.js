@@ -486,6 +486,8 @@ $(document).ready(function(){
     kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
     kanban.NEW_TICKET_URL = kanban.DATA_URL + '/newticket';
 
+    $('.board-container .toolbar button').button();
+
     kanban.request(
         '/' + TRAC_PROJECT_NAME + '/kanbanboard/',
         'GET',
