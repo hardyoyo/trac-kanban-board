@@ -103,7 +103,7 @@ class KanbanBoard:
         return len(valid_ids)
 
     # Removes tickets given in "ids" from the board.
-    # Returns number of tickets added to the board.
+    # Returns number of tickets removed from the board.
     def remove_tickets(self, ids):
         if not self.columns:
             return 0
@@ -312,32 +312,70 @@ class KanbanBoard:
         for index, column in enumerate(self.columns):
             if column['id'] == new_column['id']:
                 for key, value in new_column.items():
-                    if key != 'id':
+                    if key == 'tickets':
+                        self.columns[index]['tickets'] = self.merge_ticket_lists(
+                                self.columns[index]['tickets'], new_column['tickets'])
+                    elif key != 'id':
                         self.columns[index][key] = value
+
+    def merge_ticket_lists(self, original, new):
+        """Merge two lists so that result has all items from original list in order that matches
+           new list as closely as possible. Example: original [1,2,3,4,5], new [1,4,2,5], result
+           [1,4,2,3,5] (4 moved in front of 2, 3 added)
+        """
+        if len(original) >= len(new):
+            """Go through all items in original list:
+                - If item is not in new list (i.e. it is added), append it to result list
+                - If item is already in result list, skip it
+                - Else, append all items from start of new list up to the original list item
+                  (that are not already in result list) to result list
+            """
+            merged = []
+            for ot in original:
+                if ot in merged:
+                    continue
+                if ot in new:
+                    for nt in new:
+                        if nt is not ot:
+                            if nt not in merged:
+                                merged.append(nt)
+                        else:
+                            merged.append(nt)
+                            break
+                else:
+                    merged.append(ot)
+            return merged
+        else:
+            return new
 
     def fix_ticket_columns(self, request, save_changes, force_save):
         """Iterate through all tickets on board and check that ticket state matches column states.
-           If it doesn't, move ticket to correct column."""
+           If it doesn't, move ticket to correct column. Invalid tickets and duplicates are removed
+           in the process.
+        """
         self.log.debug('KanbanBoard::fix_ticket_columns')
         modified = False
 
-        ticket_ids = {} # 'columnID': [ticketID, ticketID, ticketID]
+        old_lists = {} # key: column ID (as string), value: list of ticket IDs (integers)
+        new_lists = {} #
         for col in self.columns:
-            ticket_ids[str(col['id'])] = []
+            old_lists[str(col['id'])] = col['tickets']
+            new_lists[str(col['id'])] = []
 
         for col in self.columns:
             for tid in col['tickets']:
                 if (str(tid) in self.tickets):
                     ticket = self.tickets[str(tid)]
-                    colId = self.status_map[ticket['status']]
-                    if colId != col['id']:
-                        modified = True
-                        ticket_ids[str(colId)].insert(0, tid)
+                    target_col = self.status_map[ticket['status']]
+                    if target_col != col['id']:
+                        if tid not in old_lists[str(target_col)]:
+                            modified = True
+                            new_lists[str(target_col)].insert(0, tid)
                     else:
-                        ticket_ids[str(colId)].append(tid)
+                        new_lists[str(target_col)].append(tid)
 
         for col in self.columns:
-            col['tickets'] = ticket_ids[str(col['id'])]
+            col['tickets'] = new_lists[str(col['id'])]
 
         if (modified and save_changes) or force_save:
             self.save_wiki_data(request)
@@ -524,7 +562,6 @@ class KanbanBoardMacro(WikiMacroBase):
 
                     board.update_column(col)
 
-            board.update_tickets()
             board.fix_ticket_columns(req, True, True)
             return req.send(board.get_json(True, False), content_type='application/json')
 
