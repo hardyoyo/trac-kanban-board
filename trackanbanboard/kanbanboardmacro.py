@@ -71,7 +71,8 @@ class KanbanBoard:
         # Map of ticket status names to matching column IDs
         self.status_map = self.get_status_to_column_map(self.columns)
 
-        self.tickets = self.fetch_tickets(detailed_tickets)
+        self.tickets = {}
+        self.fetch_tickets(self.tickets, self.get_ticket_ids(), detailed_tickets)
 
     # Adds tickets given in "ids" to the board but not necessarily in right column.
     # Always call fix_ticket_columns after this.
@@ -124,8 +125,11 @@ class KanbanBoard:
 
         return removed
 
-    def update_tickets(self):
-        self.tickets = self.fetch_tickets([])
+    def update_tickets(self, ids):
+        if ids:
+            self.fetch_tickets(self.tickets, ids, [])
+        else:
+            self.fetch_tickets(self.tickets, self.get_ticket_ids(), [])
 
     def load_wiki_data(self, page_name):
         self.log.debug('KanbanBoard::load_wiki_data: %s' % page_name)
@@ -205,17 +209,17 @@ class KanbanBoard:
 
         return map
 
-    def fetch_tickets(self, detailed):
+    def fetch_tickets(self, tickets, ids, detailed):
         self.log.debug('KanbanBoard::fetch_tickets')
 
-        tickets = {}
-        ids = self.get_ticket_ids()
         for id in ids:
             t = { 'id': id }
             try:
                 ticket = model.Ticket(self.env, id)
             except:
                 self.log.error('Failed to fetch ticket %d' % id)
+                if str(id) in tickets:
+                    delattr(tickets, str(id))
                 continue
 
             # Get mandatory fields
@@ -263,8 +267,6 @@ class KanbanBoard:
                     t['changelog'].append(time_entry)
 
             tickets[str(id)] = t
-
-        return tickets
 
     def get_json(self, include_tickets, include_fields):
         """Return JSON representation of the board.
@@ -552,15 +554,19 @@ class KanbanBoardMacro(WikiMacroBase):
                 board.add_tickets([id])
             else:
                 self.log.debug('=== Update columns (and tickets)')
+                modified_tickets = []
                 columnData = json.loads(req.read())
                 for col in columnData:
                     for ticket in col['tickets']:
                         for key, value in ticket.items():
                             if key != 'id':
                                 self.save_ticket(ticket, req.authname)
+                                modified_tickets.append(ticket['id'])
                                 break
 
                     board.update_column(col)
+                if modified_tickets:
+                    board.update_tickets(modified_tickets)
 
             board.fix_ticket_columns(req, True, True)
             return req.send(board.get_json(True, False), content_type='application/json')

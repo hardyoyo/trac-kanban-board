@@ -192,7 +192,10 @@ kanban.Board = function(data) {
             kanban.DATA_URL,
             'POST',
             ko.toJSON(modifiedColumns),
-            function(data) {console.log("updated");},
+            function(data) {
+                console.log("updated");
+                self.updateData(data);
+            },
             function() {console.log("update error")});
 
         arg.item.modifiedFields = [];
