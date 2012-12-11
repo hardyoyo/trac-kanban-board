@@ -483,7 +483,7 @@ $(document).ready(function(){
         TICKET_FIELDS);
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
-    kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
+    kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id#query';
     kanban.TICKET_URL = kanban.DATA_URL + '/ticket';
 
     $('.board-container .toolbar button').button();
