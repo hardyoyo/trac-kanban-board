@@ -3,9 +3,9 @@
      xmlns:xi="http://www.w3.org/2001/XInclude">
     <div class="board-container" style="height: $height;">
         <div class="toolbar">
-            <button data-bind="click: $$root.fetchData">Refresh</button>
             <button data-bind="click: $$root.showQueryDialog, enable: IS_EDITABLE">Add tickets</button>
             <button data-bind="click: $$root.createTicket, enable: IS_EDITABLE">New ticket</button>
+            <button data-bind="click: $$root.fetchData" class="float-right">Refresh</button>
         </div>
         <ul class="kanban-column-container" data-bind="foreach: columns">
             <li class="kanban-column" data-bind="style: {width: $$root.columnWidth()}">

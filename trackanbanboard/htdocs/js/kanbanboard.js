@@ -171,7 +171,7 @@ kanban.Board = function(data) {
     };
 
     this.columnWidth = ko.computed(function() {
-        return Math.floor(100 / self.columns().length) + '%';
+        return 100 / self.columns().length + '%';
     }, this);
 
     /* Called when card has been dragged to new position. */
