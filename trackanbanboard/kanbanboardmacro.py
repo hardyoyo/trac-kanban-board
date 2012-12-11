@@ -486,7 +486,7 @@ class KanbanBoardMacro(WikiMacroBase):
     #      Gets ticket data as input. If data contains ticket ID, modifies that ticket.
     #      If not, creates new ticket and adds it to the board. Returns board & ticket data.
     #
-    # ?tickets=1,2
+    # ?detailed=1,2
     #      Instead of minimal ticket data, returns full data for tickets #1 and #2.
     #
     # ?add=1,2
@@ -524,7 +524,7 @@ class KanbanBoardMacro(WikiMacroBase):
         added_tickets = []
         removed_tickets= []
         for arg in arg_list:
-            if arg[0] == 'tickets':
+            if arg[0] == 'detailed':
                 detailed_tickets = self._parse_id_list(arg[1])
             elif arg[0] == 'add':
                 added_tickets = self._parse_id_list(arg[1])

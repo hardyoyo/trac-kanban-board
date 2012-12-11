@@ -261,7 +261,7 @@ kanban.Board = function(data) {
         console.log('fetchData:', detailedTickets, typeof detailedTickets);
         var args = '';
         if (detailedTickets && Object.prototype.toString.call(detailedTickets) === '[object Array]') {
-            args = '?tickets=' + detailedTickets.join(',');
+            args = '?detailed=' + detailedTickets.join(',');
         }
         var url = kanban.DATA_URL + args;
         kanban.request(
