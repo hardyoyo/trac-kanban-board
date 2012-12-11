@@ -441,7 +441,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
     implements(ITemplateProvider, IRequestHandler)
 
-    request_regexp = re.compile('\/kanbanboard\/((?P<bid>\w+)(?P<new>\/newticket)?)?')
+    request_regexp = re.compile('\/kanbanboard\/((?P<bid>\w+)(?P<ticket>\/ticket)?)?')
 
     ticket_fields = []
 
@@ -482,8 +482,9 @@ class KanbanBoardMacro(WikiMacroBase):
     # POST /kanbanboard/[board ID]
     #      Updates board data and saves ticket changes. Returns board & ticket data.
     #
-    # POST /kanbanboard/[board ID]/newticket
-    #      Creates new ticket and adds it to the board. Returns board & ticket data.
+    # POST /kanbanboard/[board ID]/ticket
+    #      Gets ticket data as input. If data contains ticket ID, modifies that ticket.
+    #      If not, creates new ticket and adds it to the board. Returns board & ticket data.
     #
     # ?tickets=1,2
     #      Instead of minimal ticket data, returns full data for tickets #1 and #2.
@@ -501,13 +502,13 @@ class KanbanBoardMacro(WikiMacroBase):
             return req.send([], content_type='application/json')
 
         board_id = None
-        is_new_ticket = False
+        is_ticket_call = False
         match = self.request_regexp.match(req.path_info)
         if match:
             board_id = match.group('bid')
-            is_new_ticket = match.group('new') is not None
+            is_ticket_call = match.group('ticket') is not None
 
-        self.log.debug('new ticket: %s' % is_new_ticket)
+        self.log.debug('ticket call: %s' % is_ticket_call)
 
         if not self.ticket_fields:
             self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
@@ -552,12 +553,16 @@ class KanbanBoardMacro(WikiMacroBase):
             self.log.debug('=== Get all columns')
             return req.send(board.get_json(True, False), content_type='application/json')
         else:
-            if is_new_ticket:
-                self.log.debug('=== Create new ticket')
+            if is_ticket_call:
+                self.log.debug('=== Create/modify ticket')
                 ticket_data = json.loads(req.read())
+                is_new = 'id' not in ticket_data
                 id = self.save_ticket(ticket_data, req.authname)
                 self.log.debug('Ticket saved as #%d' % id)
-                board.add_tickets([id])
+                if is_new:
+                    board.add_tickets([id])
+                else:
+                    board.update_tickets([id])
             else:
                 self.log.debug('=== Update columns (and tickets)')
                 modified_tickets = []

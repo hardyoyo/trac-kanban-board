@@ -329,7 +329,6 @@ kanban.Board = function(data) {
         console.log('Save ticket:', self.dialogTicket(), originalTicket);
 
         var modified = false;
-        var ticketColumn = self.getTicketColumn(originalTicket.id);
 
         for (var i in kanban.metadata.ticketFields) {
             var fieldName = kanban.metadata.ticketFields[i].name;
@@ -347,12 +346,10 @@ kanban.Board = function(data) {
         }
 
         if (modified) {
-            ticketColumn.modifiedFields.push('tickets');
-
             kanban.request(
-                kanban.DATA_URL,
+                kanban.TICKET_URL,
                 'POST',
-                ko.toJSON([ticketColumn]),
+                ko.toJSON(originalTicket),
                 function(data) {
                     console.log("updated", data);
                     self.updateData(data);
@@ -361,7 +358,6 @@ kanban.Board = function(data) {
 
             originalTicket.modifiedFields = [];
             originalTicket.comment('');
-            ticketColumn.modifiedFields = [];
         }
     };
 
@@ -377,7 +373,7 @@ kanban.Board = function(data) {
         self.dialogTicket().modifiedFields = fieldNames;
 
         kanban.request(
-            kanban.NEW_TICKET_URL,
+            kanban.TICKET_URL,
             'POST',
             ko.toJSON(self.dialogTicket()),
             function(data) {
@@ -488,7 +484,7 @@ $(document).ready(function(){
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
     kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
-    kanban.NEW_TICKET_URL = kanban.DATA_URL + '/newticket';
+    kanban.TICKET_URL = kanban.DATA_URL + '/ticket';
 
     $('.board-container .toolbar button').button();
 
