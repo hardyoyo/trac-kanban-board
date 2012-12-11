@@ -74,10 +74,11 @@ class KanbanBoard:
         self.tickets = {}
         self.fetch_tickets(self.tickets, self.get_ticket_ids(), detailed_tickets)
 
-    # Adds tickets given in "ids" to the board but not necessarily in right column.
-    # Always call fix_ticket_columns after this.
-    # Returns number of tickets added to the board.
     def add_tickets(self, ids):
+        """Add tickets given in "ids" to the board but not necessarily in right column.
+           Always call fix_ticket_columns after this.
+           Returns number of tickets added to the board.
+        """
         if not self.columns:
             return 0
 
@@ -103,9 +104,10 @@ class KanbanBoard:
         self.columns[0]['tickets'].extend(valid_ids)
         return len(valid_ids)
 
-    # Removes tickets given in "ids" from the board.
-    # Returns number of tickets removed from the board.
     def remove_tickets(self, ids):
+        """Remove tickets given in "ids" from the board.
+           Returns number of tickets removed from the board.
+        """
         if not self.columns:
             return 0
 
@@ -422,11 +424,15 @@ class KanbanBoardMacro(WikiMacroBase):
     Macro name and optional arguments must be followed by board configuration. Configuration
     is in JSON format and consists of list of columns and optionally list of ticket fields.
     Each column must have following properties:
-    || id || Unique number. ||
-    || name || Column name. ||
-    || states || List of ticket states which map to this column. For example in example configuration above if the status of ticket #100 changes to "accepted" it moves to middle column (named "Ongoing"). If ticket is dragged to middle column its status changes to first state on this list ("assigned"). ||
-    || tickets || List of initial tickets in the column. This list is updated by the macro when ticket status changes. ||
-    || wip || Work-in-progress limit for the column. ||
+    || id || Unique number ||
+    || name || Column name ||
+    || states || List of ticket states which map to this column. For example in example \
+    configuration above if the status of ticket #100 changes to "accepted" it moves to \
+    middle column (named "Ongoing"). If ticket is dragged to middle column its status \
+    changes to first state on this list ("assigned"). ||
+    || tickets || List of initial tickets in the column. This list is updated by the \
+    macro when ticket status changes ||
+    || wip || Work-in-progress limit for the column ||
 
     The "fields" property defines which ticket fields are shown on the ticket detail dialog.
     Valid field names on default Trac environment are: "reporter", "owner", "status",
