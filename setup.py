@@ -18,7 +18,7 @@ setup(
     author = 'Arto Nyk\xc3\xa4nen',
     author_email = 'arto.nykanen@digia.com',
     url = 'http://projects.developer.nokia.com/TracKanbanBoard',
-    license = 'BSD',
+    license = 'BSD-new',
     packages = find_packages(exclude=['ez_setup', 'examples', 'tests']),
     package_data = {
         'trackanbanboard': [
