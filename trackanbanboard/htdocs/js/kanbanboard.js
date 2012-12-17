@@ -313,14 +313,38 @@ kanban.Board = function(data) {
     };
 
     this.showQueryDialog = function() {
-        console.log('showQueryDialog');
-        $('#queryFrame').attr('src', kanban.QUERY_URL);
+        var $iframe = $('#queryFrame');
+        $iframe.off('load');
+        $iframe.on('load', function () {
+            var $banner = $iframe.contents().find('#banner');
+            if ($banner) $banner.hide();
+            var $mainnav = $iframe.contents().find('#mainnav');
+            if ($mainnav) $mainnav.hide();
+        });
+
+        $iframe.attr('src', kanban.QUERY_URL);
         var $dialogDiv = $('#queryDialog');
         kanban.queryDialog = $dialogDiv.dialog({
             title: 'Drag and drop ticket links to Kanban board',
             width: 600,
             height: 400,
             position: 'right'
+        });
+
+        kanban.queryDialog.off('dialogresizestart');
+        kanban.queryDialog.on('dialogresizestart', function(event, ui) {
+            var $d = $('<div></div>');
+            $iframe.after($d[0]);
+            $d[0].id = 'tempDiv';
+            $d.css({position: 'absolute'});
+            $d.css({top: $iframe.position().top, left: 0});
+            $d.height($iframe.height());
+            $d.width('100%');
+        });
+
+        kanban.queryDialog.off('dialogresizestop');
+        kanban.queryDialog.on('dialogresizestop', function(event, ui) {
+            $('#tempDiv').remove();
         });
     };
 
@@ -483,7 +507,7 @@ $(document).ready(function(){
         TICKET_FIELDS);
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
-    kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id#query';
+    kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
     kanban.TICKET_URL = kanban.DATA_URL + '/ticket';
 
     $('.board-container .toolbar button').button();
