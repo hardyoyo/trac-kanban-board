@@ -8,13 +8,6 @@ Main features
 - View and modify ticket fields (summary, description, etc.) and add comments from ticket detail dialog
 - Define what ticket fields are visible on ticket detail dialog
 
-Data storage
-============
-
-Plugin uses Trac tickets as kanban board "cards". Any existing ticket from project can be added to the board and modifed either from board or from default Trac ticket view.
-
-All kanban board specific information (such as column definitions and card order) is stored in macro definition on wiki page. When cards are moved around plugin updates the macro definition and rewrites wiki page.
-
 Installation
 ============
 
@@ -32,14 +25,24 @@ Installation
     [components]
     trackanbanboard.* = enabled
 
-#. Create/modify wiki page and put `KanbanBoard` processor in it. Empty data will given an error but also the detailed usage instructions::
+#. Create/modify wiki page and put `KanbanBoard` processor in it. Empty data will give an error but also the detailed usage instructions::
 
     This is wiki text:
     {{{
     #!KanbanBoard
     }}}
 
-Here's an example macro definition that produces Kanban board with three columns (New, Ongoing and Done)::
+Data storage
+============
+
+Plugin uses Trac tickets as kanban board "cards". Any existing ticket from project can be added to the board and modifed either from board or from default Trac ticket view.
+
+All kanban board specific information (such as column definitions and card order) is stored in macro definition on wiki page. When cards are moved around plugin updates the macro definition and rewrites wiki page.
+
+Example
+=======
+
+Here's an example macro definition that produces Kanban board with three columns (New, Ongoing and Done) and shows status and priority fields in ticket dialog::
 
     {{{
     #!KanbanBoard height=250px
@@ -50,10 +53,10 @@ Here's an example macro definition that produces Kanban board with three columns
         { "id": 3, "name": "Done", "states": ["closed"], "tickets": [22], "wip": 5 }
       ],
       "fields": [
-        "status", "priority", "type", "keywords"
+        "status", "priority"
       ]
     }
     }}}
 
-You can also use `[[MacroList(KanbanBoard)]]` macro to see full documentation.
+For full documentation please use `[[MacroList(KanbanBoard)]]` macro or check the source code.
 
