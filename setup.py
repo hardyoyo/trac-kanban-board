@@ -4,14 +4,21 @@ setup(
     name = 'TracKanbanBoard',
     version = '0.1',
     description = "Kanban board plugin for Trac",
-    long_description = """\
-    """,
-    classifiers = [], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
-    keywords = '',
+    long_description = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Environment :: Plugins',
+        'Environment :: Web Environment',
+        'Framework :: Trac',
+        'License :: OSI Approved :: BSD License',
+        'Natural Language :: English',
+        'Programming Language :: Python'
+    ],
+    keywords = 'trac plugin kanban',
     author = 'Arto Nyk\xc3\xa4nen',
     author_email = 'arto.nykanen@digia.com',
-    url = '',
-    license = '',
+    url = 'http://projects.developer.nokia.com/TracKanbanBoard',
+    license = 'BSD',
     packages = find_packages(exclude=['ez_setup', 'examples', 'tests']),
     package_data = {
         'trackanbanboard': [
