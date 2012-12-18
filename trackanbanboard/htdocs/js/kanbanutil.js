@@ -14,8 +14,6 @@ kanbanutil.zeroFill = function(number, width) {
  * If element dropped in 'event' is a ticket link for project 'projectName', return the ticket ID.
  */
 kanbanutil.getTicketIdFromDropEvent = function(event, projectName) {
-    console.log('getTicketIdFromDropEvent', event);
-
     var dataTransfer;
     var url;
     var id;

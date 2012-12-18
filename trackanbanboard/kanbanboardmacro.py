@@ -134,8 +134,6 @@ class KanbanBoard:
             self.fetch_tickets(self.tickets, self.get_ticket_ids(), [])
 
     def load_wiki_data(self, page_name):
-        self.log.debug('KanbanBoard::load_wiki_data: %s' % page_name)
-
         page = WikiPage(self.env, page_name)
         if not page.exists:
             self.log.error('Wiki page "%s" doesn\'t exist' % page_name)
@@ -171,8 +169,6 @@ class KanbanBoard:
         raise InvalidDataError('Last line of data not found')
 
     def save_wiki_data(self, req):
-        self.log.debug('KanbanBoard::save_wiki_data')
-
         page = WikiPage(self.env, self.name)
         if not page.exists:
             self.log.error('Wiki page "%s" doesn\'t exist' % self.name)
@@ -201,7 +197,7 @@ class KanbanBoard:
             try:
                 page.save(req.authname, 'Kanban board data changed', req.remote_addr)
             except TracError as e:
-                self.log.debug('TracError: "%s"' % e.message)
+                self.log.error('TracError: "%s"' % e.message)
 
     def get_status_to_column_map(self, columns):
         map = {}
@@ -212,8 +208,6 @@ class KanbanBoard:
         return map
 
     def fetch_tickets(self, tickets, ids, detailed):
-        self.log.debug('KanbanBoard::fetch_tickets')
-
         for id in ids:
             t = { 'id': id }
             try:
@@ -306,9 +300,6 @@ class KanbanBoard:
         return ids
 
     def update_column(self, new_column):
-        self.log.debug('KanbanBoard::update_column: %d' % new_column['id'])
-        self.log.debug(new_column)
-
         if 'tickets' in new_column:
             # convert ticket list to list of integers (ticket IDs)
             new_column['tickets'] = map(lambda x: x['id'], new_column['tickets'])
@@ -357,7 +348,6 @@ class KanbanBoard:
            If it doesn't, move ticket to correct column. Invalid tickets and duplicates are removed
            in the process.
         """
-        self.log.debug('KanbanBoard::fix_ticket_columns')
         modified = False
 
         old_lists = {} # key: column ID (as string), value: list of ticket IDs (integers)
@@ -448,7 +438,6 @@ class KanbanBoardMacro(WikiMacroBase):
     def save_ticket(self, ticket_data, author):
         """If ticket_data contains an ID, modifies defined fields in that ticket.
            If not, creates new ticket. Returns the ID of new/modified ticket."""
-        self.log.debug('KanbanBoardMacro::save_ticket: %s' % repr(ticket_data))
 
         id = None
         comment = ''
@@ -496,7 +485,7 @@ class KanbanBoardMacro(WikiMacroBase):
     #      Before handling request, removes tickets #1 and #2 from the board.
 
     def process_request(self, req):
-        self.log.debug('=== HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
+        self.log.debug('HTTP request: %s, method: %s, user: %s' % (req.path_info, req.method, req.authname))
 
         if req.method != 'GET' and req.method != 'POST':
             return req.send([], content_type='application/json')
@@ -508,13 +497,10 @@ class KanbanBoardMacro(WikiMacroBase):
             board_id = match.group('bid')
             is_ticket_call = match.group('ticket') is not None
 
-        self.log.debug('ticket call: %s' % is_ticket_call)
-
         if not self.ticket_fields:
             self.ticket_fields = TicketSystem(self.env).get_ticket_fields()
 
         if board_id is None:
-            self.log.debug('=== Get metadata')
             meta_data = {}
             meta_data['ticketFields'] = self.ticket_fields
             return req.send(json.dumps(meta_data), content_type='application/json')
@@ -530,9 +516,6 @@ class KanbanBoardMacro(WikiMacroBase):
                 added_tickets = self._parse_id_list(arg[1])
             elif arg[0] == 'remove':
                 removed_tickets = self._parse_id_list(arg[1])
-        self.log.debug('Detailed tickets: %s' % repr(detailed_tickets))
-        self.log.debug('Added tickets: %s' % repr(added_tickets))
-        self.log.debug('Removed tickets: %s' % repr(removed_tickets))
 
         board = KanbanBoard(board_id, detailed_tickets, self.ticket_fields, self.env, self.log)
 
@@ -546,25 +529,20 @@ class KanbanBoardMacro(WikiMacroBase):
 
         # We need to update board data to match (possibly changed) ticket states
         is_editable = 'WIKI_MODIFY' in req.perm and 'TICKET_MODIFY' in req.perm
-        self.log.debug('is_editable: %s', is_editable)
         board.fix_ticket_columns(req, is_editable, added > 0 or removed > 0)
 
         if req.method == 'GET':
-            self.log.debug('=== Get all columns')
             return req.send(board.get_json(True, False), content_type='application/json')
         else:
             if is_ticket_call:
-                self.log.debug('=== Create/modify ticket')
                 ticket_data = json.loads(req.read())
                 is_new = 'id' not in ticket_data
                 id = self.save_ticket(ticket_data, req.authname)
-                self.log.debug('Ticket saved as #%d' % id)
                 if is_new:
                     board.add_tickets([id])
                 else:
                     board.update_tickets([id])
             else:
-                self.log.debug('=== Update columns (and tickets)')
                 modified_tickets = []
                 columnData = json.loads(req.read())
                 for col in columnData:
@@ -595,7 +573,6 @@ class KanbanBoardMacro(WikiMacroBase):
         template_file = 'kanbanboard.html'
         board = None
 
-        self.log.debug(args)
         template_data['height'] = '300px'
         if args:
             template_data['height'] = args.get('height', '300px')

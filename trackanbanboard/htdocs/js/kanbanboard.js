@@ -1,7 +1,6 @@
 var kanban = kanban || {};
 
 kanban.Ticket = function(data) {
-    console.log('new Ticket', data.id);
     var self = this;
 
     ko.mapping.fromJS(data, {
@@ -61,20 +60,16 @@ kanban.Ticket = function(data) {
     };
 
     this.updateData = function(data) {
-        console.log('Update ticket', data.id, data);
         ko.mapping.fromJS(data, self);
 
         if (kanban.rootModel) {
             var dt = kanban.rootModel.dialogTicket();
             if (dt && dt.id == self.id) {
-                console.log('Update dialog ticket');
                 kanban.rootModel.selectedTicket(self);
                 kanban.rootModel.dialogTicket(new kanban.Ticket(ko.mapping.toJS(self)));
             }
         }
     };
-
-    console.log(this);
 };
 
 /*
@@ -90,7 +85,6 @@ kanban.Ticket.prototype.toJSON = function() {
 };
 
 kanban.Column = function(data) {
-    console.log('new Column', data.id);
     var self = this;
 
     ko.mapping.fromJS(data, {
@@ -109,11 +103,8 @@ kanban.Column = function(data) {
     this.modifiedFields = [];
 
     this.updateData = function(data) {
-        console.log('Update column', data.id, data);
         ko.mapping.fromJS(data, self);
     };
-
-    console.log(this);
 };
 
 /*
@@ -129,7 +120,6 @@ kanban.Column.prototype.toJSON = function() {
 };
 
 kanban.Board = function(data) {
-    console.log('new Board');
     var self = this;
 
     this.mapping = {
@@ -155,8 +145,6 @@ kanban.Board = function(data) {
     this.ticketFieldOptions = {};
 
     this.setTicketFieldOptions = function(fieldName, options) {
-        console.log('setTicketFieldOptions:', fieldName, options);
-
         // Add the "not defined" option.
         // Trac defines status to be optional but kanban board requires it to be always set.
         for (var i in kanban.metadata.ticketFields) {
@@ -193,10 +181,11 @@ kanban.Board = function(data) {
             'POST',
             ko.toJSON(modifiedColumns),
             function(data) {
-                console.log("updated");
                 self.updateData(data);
             },
-            function() {console.log("update error")});
+            function() {
+                console.error("update error");
+            });
 
         arg.item.modifiedFields = [];
         for (var i in modifiedColumns) {
@@ -240,7 +229,6 @@ kanban.Board = function(data) {
     };
 
     this.selectTicket = function(ticket) {
-        console.log('selectTicket:', ticket);
         self.selectedTicket(ticket);
         /* Use copy of selected ticket in dialog so that original ticket doesn't change before Save is clicked. */
         self.dialogTicket(new kanban.Ticket(ko.mapping.toJS(ticket)));
@@ -249,7 +237,6 @@ kanban.Board = function(data) {
     };
 
     this.createTicket = function() {
-        console.log('createTicket');
         var defaultData = kanban.getNewTicketData();
         self.dialogTicket(new kanban.Ticket(defaultData));
         self.showTicketDialog();
@@ -258,7 +245,6 @@ kanban.Board = function(data) {
     /* Fetch board data from backend. Data includes all columns and all tickets. By default ticket data includes
         only id, summary and status fields. For tickets specified in detailedTickets argument, all fields are included. */
     this.fetchData = function(detailedTickets) {
-        console.log('fetchData:', detailedTickets, typeof detailedTickets);
         var args = '';
         if (detailedTickets && Object.prototype.toString.call(detailedTickets) === '[object Array]') {
             args = '?detailed=' + detailedTickets.join(',');
@@ -275,7 +261,6 @@ kanban.Board = function(data) {
     };
 
     this.showTicketDialog = function() {
-        console.log('showTicketDialog');
         var newTicket = typeof self.dialogTicket().id === 'undefined';
         var buttons = {};
 
@@ -331,27 +316,37 @@ kanban.Board = function(data) {
             position: 'right'
         });
 
+        // Workaround for http://bugs.jqueryui.com/ticket/7650
         kanban.queryDialog.off('dialogresizestart');
-        kanban.queryDialog.on('dialogresizestart', function(event, ui) {
-            var $d = $('<div></div>');
-            $iframe.after($d[0]);
-            $d[0].id = 'tempDiv';
-            $d.css({position: 'absolute'});
-            $d.css({top: $iframe.position().top, left: 0});
-            $d.height($iframe.height());
-            $d.width('100%');
-        });
+        kanban.queryDialog.on('dialogresizestart', self.createQueryDialogOverlay);
 
         kanban.queryDialog.off('dialogresizestop');
-        kanban.queryDialog.on('dialogresizestop', function(event, ui) {
-            $('#tempDiv').remove();
-        });
+        kanban.queryDialog.on('dialogresizestop', self.destroyQueryDialogOverlay);
+
+        kanban.queryDialog.off('dialogdragstart');
+        kanban.queryDialog.on('dialogdragstart', self.createQueryDialogOverlay);
+
+        kanban.queryDialog.off('dialogdragstop');
+        kanban.queryDialog.on('dialogdragstop', self.destroyQueryDialogOverlay);
+    };
+
+    this.createQueryDialogOverlay = function() {
+        var $iframe = $('#queryFrame');
+        var $d = $('<div></div>');
+        $iframe.after($d[0]);
+        $d[0].id = 'tempDiv';
+        $d.css({position: 'absolute'});
+        $d.css({top: $iframe.position().top, left: 0});
+        $d.height($iframe.height());
+        $d.width('100%');
+    };
+
+    this.destroyQueryDialogOverlay = function() {
+        $('#tempDiv').remove();
     };
 
     /* Check if dialog ticket has changed from original ticket and save changes if necessary */
     this.saveDialogTicket = function(originalTicket) {
-        console.log('Save ticket:', self.dialogTicket(), originalTicket);
-
         var modified = false;
 
         for (var i in kanban.metadata.ticketFields) {
@@ -375,10 +370,11 @@ kanban.Board = function(data) {
                 'POST',
                 ko.toJSON(originalTicket),
                 function(data) {
-                    console.log("updated", data);
                     self.updateData(data);
                 },
-                function() {console.log("update error")});
+                function() {
+                    console.error("update error");
+                });
 
             originalTicket.modifiedFields = [];
             originalTicket.comment('');
@@ -386,8 +382,6 @@ kanban.Board = function(data) {
     };
 
     this.createDialogTicket = function() {
-        console.log('Create ticket:', self.dialogTicket());
-
         var fieldNames = [];
         for (var i in kanban.metadata.ticketFields) {
             var name = kanban.metadata.ticketFields[i].name;
@@ -401,42 +395,41 @@ kanban.Board = function(data) {
             'POST',
             ko.toJSON(self.dialogTicket()),
             function(data) {
-                console.log("created", data);
                 self.updateData(data);
             },
-            function() {console.log("create error")});
+            function() {
+                console.error("create error");
+            });
 
         self.dialogTicket().modifiedFields = [];
     };
 
     this.addTicket = function(ticketId) {
-        console.log('Add ticket:', ticketId);
-
         var url = kanban.DATA_URL + '?add=' + ticketId;
         kanban.request(
             url,
             'GET',
             null,
             function(data) {
-                console.log("added", data);
                 self.updateData(data);
             },
-            function() {console.log("add error")});
+            function() {
+                console.error("adding error");
+            });
     };
 
     this.removeTicket = function(ticketId) {
-        console.log('Remove ticket:', ticketId);
-
         var url = kanban.DATA_URL + '?remove=' + ticketId;
         kanban.request(
             url,
             'GET',
             null,
             function(data) {
-                console.log("removed", data);
                 self.updateData(data);
             },
-            function() {console.log("remove error")});
+            function() {
+                console.error("removing error");
+            });
     };
 
     /* Toggles ticket detail dialog section (description, changelog, comment) visibility*/
@@ -446,7 +439,6 @@ kanban.Board = function(data) {
 };
 
 kanban.request = function(url, type, reqData, onSuccess, onError) {
-    console.log('HTTP request:', url, type, reqData);
     $.ajax({
         type: type,
         url: url,
@@ -499,12 +491,11 @@ kanban.onDataFetchError = function(jqXHR, textStatus, error) {
 
 $(document).ready(function(){
     console.log(
-        "Document ready. Board ID:",
-        KANBAN_BOARD_ID,
-        TRAC_PROJECT_NAME,
-        TRAC_USER_NAME,
-        (IS_EDITABLE ? "editable" : "read-only"),
-        TICKET_FIELDS);
+        "Board ID:", KANBAN_BOARD_ID,
+        "; Project name:", TRAC_PROJECT_NAME,
+        "; User name:", TRAC_USER_NAME,
+        (IS_EDITABLE ? "; Editable" : "; Read-only"),
+        "; Ticket fields:", TICKET_FIELDS);
 
     kanban.DATA_URL = '/' + TRAC_PROJECT_NAME + '/kanbanboard/' + KANBAN_BOARD_ID;
     kanban.QUERY_URL = '/' + TRAC_PROJECT_NAME + '/query?status=new&col=id&col=summary&col=status&col=type&col=priority&order=id';
@@ -518,7 +509,6 @@ $(document).ready(function(){
         null,
         function(data) {
             kanban.metadata = data;
-            console.log(kanban.metadata);
 
             if (TICKET_FIELDS && data && data.ticketFields) {
                 kanban.createTicketFields($('.field-table'), TICKET_FIELDS, data.ticketFields);
