@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 setup(
@@ -31,9 +32,7 @@ setup(
     },
     include_package_data = True,
     zip_safe = False,
-    install_requires = [
-        # -*- Extra requirements: -*-
-    ],
+    install_requires = ['Trac'],
     entry_points = """
         [trac.plugins]
         trackanbanboard = trackanbanboard
