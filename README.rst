@@ -1,6 +1,9 @@
-Main features
-=============
+Description
+===========
 
+TracKanbanBoard is a Trac wiki macro for managing tickets with agile Kanban method. Add KanbanBoard macro to wiki page and use it to prioritize and manage tickets in the project.
+
+Main features:
 - Define board columns and how they map to ticket states
 - Change ticket state by dragging tickets on the board
 - Add existing tickets to board by drag-and-dropping ticket links
@@ -37,12 +40,12 @@ Data storage
 
 Plugin uses Trac tickets as kanban board "cards". Any existing ticket from project can be added to the board and modifed either from board or from default Trac ticket view.
 
-All kanban board specific information (such as column definitions and card order) is stored in macro definition on wiki page. When cards are moved around plugin updates the macro definition and rewrites wiki page.
+Board configuration and state is stored on wiki page inside `KanbanBoard` processor block in JSON format (see example below). When cards are moved around, plugin updates the state and rewrites the wiki page.
 
 Example
 =======
 
-Here's an example macro definition that produces Kanban board with three columns (New, Ongoing and Done) and shows status and priority fields in ticket dialog::
+Here's an example macro definition that produces Kanban board with three columns (New, Ongoing and Done) and shows status and priority fields in ticket dialog. First column contains three tickets (in order from top to bottom: #23, #24 and #25), second column one ticket and third column is empty. Invalid ticket IDs in configuration are ignored and removed automatically when board state is saved. ::
 
     {{{
     #!KanbanBoard height=250px
@@ -50,7 +53,7 @@ Here's an example macro definition that produces Kanban board with three columns
       "columns": [
         { "id": 1, "name": "New", "states": ["new"], "tickets": [23, 24, 25], "wip": 3 },
         { "id": 2, "name": "Ongoing", "states": ["assigned", "accepted", "reopened"], "tickets": [21], "wip": 3 },
-        { "id": 3, "name": "Done", "states": ["closed"], "tickets": [22], "wip": 5 }
+        { "id": 3, "name": "Done", "states": ["closed"], "tickets": [], "wip": 5 }
       ],
       "fields": [
         "status", "priority"
@@ -58,5 +61,27 @@ Here's an example macro definition that produces Kanban board with three columns
     }
     }}}
 
-For full documentation please use `[[MacroList(KanbanBoard)]]` macro or check the source code.
+Description for different options and properties can be displayed with `[[MacroList(KanbanBoard)]]` macro.
+
+How to use
+==========
+
+Tickets can be added to board by drag-and-dropping ticket links to board. Links can be dragged from same page as board, separate browser window or from the ticket query dialog which can be opened by clicking the 'Add tickets' button.
+
+New ticket can be created by clicking the 'New ticket' button and entering ticket details. Tickets created this way are added to board automatically.
+
+Each "card" on board displays ticket ID and summary. Additional details can be viewed in ticket detail dialog which can be opened by clicking individual cards. Detail dialog contains:
+- Link to corresponding Trac ticket page (in title bar)
+- Ticket creation and modification times
+- Summary
+- Any user defined fields (as defined by "fields" property in macro definition)
+- Ticket description as plain text
+- Change history
+- Comment field
+
+If user has TICKET_MODIFY and WIKI_MODIFY permissions, summary, description, custom fields and comment are editable and changes can be saved by clicking 'Save' button.
+
+Tickets can be removed from board by clicking 'Remove from board' button in ticket detail dialog. Removing ticket from board does not modify or delete the ticket.
+
+If user has proper permissions ticket status can also be modified by dragging tickets from one column to another. In this case ticket's new status is the first status of destination column's "states" property.
 
