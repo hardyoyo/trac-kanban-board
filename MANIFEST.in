@@ -1,0 +1,6 @@
+recursive-include trackanbanboard templates/*.html
+recursive-include trackanbanboard htdocs/js/*.js
+recursive-include trackanbanboard htdocs/js/libs/*.js
+recursive-include trackanbanboard htdocs/css/*.css
+recursive-include trackanbanboard htdocs/css/images/*.png
+
