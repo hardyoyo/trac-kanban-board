@@ -68,7 +68,7 @@ class KanbanBoard:
         else:
             raise InvalidDataError('No columns defined')
 
-        # Map of ticket status names to matching column IDs
+        # Map of ticket status names to list of matching column IDs
         self.status_map = self.get_status_to_column_map(self.columns)
 
         self.tickets = {}
@@ -203,7 +203,10 @@ class KanbanBoard:
         map = {}
         for col in columns:
             for status in col['states']:
-                map[status] = col['id']
+                if status in map:
+                    map[status].append(col['id'])
+                else:
+                    map[status] = [col['id']]
 
         return map
 
@@ -299,19 +302,29 @@ class KanbanBoard:
             ids.extend(col['tickets'])
         return ids
 
-    def update_column(self, new_column):
-        if 'tickets' in new_column:
-            # convert ticket list to list of integers (ticket IDs)
-            new_column['tickets'] = map(lambda x: x['id'], new_column['tickets'])
+    def update_columns(self, new_columns):
+        for new_column in new_columns:
+            if 'tickets' in new_column:
+                # convert ticket list to list of integers (ticket IDs)
+                new_column['tickets'] = map(lambda x: x['id'], new_column['tickets'])
 
-        for index, column in enumerate(self.columns):
-            if column['id'] == new_column['id']:
-                for key, value in new_column.items():
-                    if key == 'tickets':
-                        self.columns[index]['tickets'] = self.merge_ticket_lists(
-                                self.columns[index]['tickets'], new_column['tickets'])
-                    elif key != 'id':
-                        self.columns[index][key] = value
+            for index, column in enumerate(self.columns):
+                if column['id'] == new_column['id']:
+                    for key, value in new_column.items():
+                        if key == 'tickets':
+                            self.columns[index]['tickets'] = self.merge_ticket_lists(
+                                    self.columns[index]['tickets'], new_column['tickets'])
+                        elif key != 'id':
+                            self.columns[index][key] = value
+
+        # Iterates all tickets in new_columns and removes duplicates from other columns
+        # TODO: optimize
+        for new_column in new_columns:
+            if 'tickets' in new_column:
+                for ticket in new_column['tickets']:
+                    for col in self.columns:
+                        if col['id'] != new_column['id']:
+                            col['tickets'] = [t for t in col['tickets'] if t != ticket]
 
     def merge_ticket_lists(self, original, new):
         """Merge two lists so that result has all items from original list in order that matches
@@ -360,13 +373,17 @@ class KanbanBoard:
             for tid in col['tickets']:
                 if (str(tid) in self.tickets):
                     ticket = self.tickets[str(tid)]
-                    target_col = self.status_map[ticket['status']]
-                    if target_col != col['id']:
-                        if tid not in old_lists[str(target_col)]:
+                    if not ticket['status'] in self.status_map:
+                        # board doesn't have suitable column for this ticket
+                        continue
+                    target_cols = self.status_map[ticket['status']]
+                    if not col['id'] in target_cols:
+                        # ticket is in wrong column
+                        if tid not in old_lists[str(target_cols[0])]:
                             modified = True
-                            new_lists[str(target_col)].insert(0, tid)
+                            new_lists[str(target_cols[0])].insert(0, tid)
                     else:
-                        new_lists[str(target_col)].append(tid)
+                        new_lists[str(col['id'])].append(tid)
 
         for col in self.columns:
             col['tickets'] = new_lists[str(col['id'])]
@@ -544,8 +561,8 @@ class KanbanBoardMacro(WikiMacroBase):
                     board.update_tickets([id])
             else:
                 modified_tickets = []
-                columnData = json.loads(req.read())
-                for col in columnData:
+                column_data = json.loads(req.read())
+                for col in column_data:
                     for ticket in col['tickets']:
                         for key, value in ticket.items():
                             if key != 'id':
@@ -553,7 +570,7 @@ class KanbanBoardMacro(WikiMacroBase):
                                 modified_tickets.append(ticket['id'])
                                 break
 
-                    board.update_column(col)
+                board.update_columns(column_data)
                 if modified_tickets:
                     board.update_tickets(modified_tickets)
 
