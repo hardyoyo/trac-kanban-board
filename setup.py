@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = 'TracKanbanBoard',
-    version = '0.1',
+    version = '0.2',
     description = "Kanban board plugin for Trac",
     long_description = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     classifiers = [
