@@ -511,7 +511,7 @@ class KanbanBoardMacro(WikiMacroBase):
         is_ticket_call = False
         match = self.request_regexp.match(req.path_info)
         if match:
-            board_id = match.group('bid')
+            board_id = formatter.req.path_info.split('/')[-1]
             is_ticket_call = match.group('ticket') is not None
 
         if not self.ticket_fields:
