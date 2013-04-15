@@ -405,7 +405,7 @@ class KanbanBoard:
         return invalid_fields
 
 class KanbanBoardMacro(WikiMacroBase):
-    def __init__():
+    def __init__(self):
             self.board_name = None
     """
     Usage:
