@@ -405,6 +405,8 @@ class KanbanBoard:
         return invalid_fields
 
 class KanbanBoardMacro(WikiMacroBase):
+    def __init__():
+            self.board_name = None
     """
     Usage:
 
@@ -479,8 +481,6 @@ class KanbanBoardMacro(WikiMacroBase):
     def match_request(self, req):
         return self.request_regexp.match(req.path_info)
 
-        def __init__():
-            self.board_name = None
 
     # GET  /kanbanboard/
     #      Returns metadata (ticket fields etc.)
