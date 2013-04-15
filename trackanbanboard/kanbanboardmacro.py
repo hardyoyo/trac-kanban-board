@@ -479,6 +479,9 @@ class KanbanBoardMacro(WikiMacroBase):
     def match_request(self, req):
         return self.request_regexp.match(req.path_info)
 
+        def __init__():
+            self.board_name = None
+
     # GET  /kanbanboard/
     #      Returns metadata (ticket fields etc.)
     #
@@ -511,7 +514,7 @@ class KanbanBoardMacro(WikiMacroBase):
         is_ticket_call = False
         match = self.request_regexp.match(req.path_info)
         if match:
-            board_id = formatter.req.path_info.split('/')[-1]
+            board_id = self.board_name
             is_ticket_call = match.group('ticket') is not None
 
         if not self.ticket_fields:
@@ -596,6 +599,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
         project_name = self.env.path.split('/')[-1]
         page_name = formatter.req.path_info.split('/')[-1]
+        self.board_name = page_name
         is_editable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
 
         js_globals = {
