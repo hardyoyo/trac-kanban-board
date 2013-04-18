@@ -1,3 +1,28 @@
+function getCookie(c_name)
+    {
+        var c_value = document.cookie;
+        var c_start = c_value.indexOf(" " + c_name + "=");
+        if (c_start == -1)
+          {
+          c_start = c_value.indexOf(c_name + "=");
+          }
+        if (c_start == -1)
+          {
+          c_value = null;
+          }
+        else
+          {
+          c_start = c_value.indexOf("=", c_start) + 1;
+          var c_end = c_value.indexOf(";", c_start);
+          if (c_end == -1)
+          {
+        c_end = c_value.length;
+        }
+        c_value = unescape(c_value.substring(c_start,c_end));
+        }
+        return c_value;
+    };
+
 var kanban = kanban || {};
 
 kanban.Ticket = function(data) {
@@ -135,34 +160,11 @@ kanban.Board = function(data) {
 
     /*Check that session hasn't died*/
 
-    this.getCookie = function(c_name)
-    {
-        var c_value = document.cookie;
-        var c_start = c_value.indexOf(" " + c_name + "=");
-        if (c_start == -1)
-          {
-          c_start = c_value.indexOf(c_name + "=");
-          }
-        if (c_start == -1)
-          {
-          c_value = null;
-          }
-        else
-          {
-          c_start = c_value.indexOf("=", c_start) + 1;
-          var c_end = c_value.indexOf(";", c_start);
-          if (c_end == -1)
-          {
-        c_end = c_value.length;
-        }
-        c_value = unescape(c_value.substring(c_start,c_end));
-        }
-        return c_value;
-    };
+    
 
     this.checkSession = function(){
         var check = true;
-        if(this.getCookie("trac_auth").length <= 0 || this.getCookie('trac_form_token') <= 0){
+        if(getCookie("trac_auth").length <= 0 || getCookie('trac_form_token') <= 0){
             check = false;
         }
         return check;
@@ -199,7 +201,7 @@ kanban.Board = function(data) {
 
     /* Called when card has been dragged to new position. */
     this.afterMove = function(arg) {
-        if(this.checkSession()){
+        if(self.checkSession()){
             var sourceColumn = self.getColumn(arg.sourceParent.id);
             sourceColumn.modifiedFields.push('tickets');
             var modifiedColumns = [sourceColumn];
@@ -277,7 +279,7 @@ kanban.Board = function(data) {
     };
 
     this.createTicket = function() {
-        if(this.checkSession()){
+        if(self.checkSession()){
             var defaultData = kanban.getNewTicketData();
             self.dialogTicket(new kanban.Ticket(defaultData));
             self.showTicketDialog();
@@ -392,7 +394,7 @@ kanban.Board = function(data) {
 
     /* Check if dialog ticket has changed from original ticket and save changes if necessary */
     this.saveDialogTicket = function(originalTicket) {
-        if(this.checkSession()){
+        if(self.checkSession()){
             var modified = false;
 
             for (var i in kanban.metadata.ticketFields) {
