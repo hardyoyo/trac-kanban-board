@@ -405,6 +405,8 @@ class KanbanBoard:
         return invalid_fields
 
 class KanbanBoardMacro(WikiMacroBase):
+    def __init__(self):
+        self.wiki_page_name = None
     """
     Usage:
 
@@ -511,7 +513,7 @@ class KanbanBoardMacro(WikiMacroBase):
         is_ticket_call = False
         match = self.request_regexp.match(req.path_info)
         if match:
-            board_id = match.group('bid')
+            board_id = self.wiki_page_name
             is_ticket_call = match.group('ticket') is not None
 
         if not self.ticket_fields:
@@ -596,6 +598,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
         project_name = self.env.path.split('/')[-1]
         page_name = formatter.req.path_info.split('/')[-1]
+        self.wiki_page_name = page_name
         is_editable = 'WIKI_MODIFY' in formatter.req.perm and 'TICKET_MODIFY' in formatter.req.perm
 
         js_globals = {
