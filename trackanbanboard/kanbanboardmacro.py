@@ -448,7 +448,7 @@ class KanbanBoardMacro(WikiMacroBase):
 
     implements(ITemplateProvider, IRequestHandler)
 
-    request_regexp = re.compile('\/kanbanboard\/((?P<bid>\w+)(?P<ticket>\/ticket)?)?')
+    request_regexp = re.compile('\/kanbanboard\/((?P<bid>\w+\s*\w*)(?P<ticket>\/ticket)?)?')
 
     ticket_fields = []
 

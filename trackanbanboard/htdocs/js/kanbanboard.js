@@ -25,9 +25,16 @@ function getCookie(c_name)
 
 function checkSession(){
     var check = true;
-    if(getCookie("trac_auth").length <= 0 || getCookie('trac_form_token') <= 0){
+    var trac_auth = getCookie('trac_auth');
+    var trac_form_token = getCookie('trac_form_token');
+    var alert_msg = "Session expired. Please relogin.";
+    if(trac_auth == null || trac_form_token == null){
         check = false;
-        alert("Session expired!");
+        alert(alert_msg);
+    }
+    else if (trac_auth.length <= 0 || trac_form_token.length <= 0){
+        check = false;
+        alert(alert_msg);
     }
     return check;
 };
@@ -474,15 +481,17 @@ kanban.Board = function(data) {
 };
 
 kanban.request = function(url, type, reqData, onSuccess, onError) {
-    $.ajax({
-        type: type,
-        url: url,
-        contentType: 'application/json',
-        data: reqData,
-        dataType: 'json',
-        success: onSuccess,
-        error: onError
-    });
+    if(checkSession()){
+        $.ajax({
+            type: type,
+            url: url,
+            contentType: 'application/json',
+            data: reqData,
+            dataType: 'json',
+            success: onSuccess,
+            error: onError
+        });
+    }
 };
 
 kanban.onDataFetched = function(data) {
@@ -525,6 +534,7 @@ kanban.onDataFetchError = function(jqXHR, textStatus, error) {
 };
 
 $(document).ready(function(){
+    console.log("Session: "+ checkSession());
     console.log(
         "Board ID:", KANBAN_BOARD_ID,
         "; Project name:", TRAC_PROJECT_NAME,
