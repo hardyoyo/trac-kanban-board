@@ -66,8 +66,8 @@ plug-in updates the state and rewrites the wiki page.
 
 Below is an example macro definition that produces kanban board with three
 columns (New, Ongoing and Done) and shows status and priority fields in ticket
-dialog. First column contains three tickets (in order from top to bottom: #23,
-#24 and #25), second column one ticket and third column is empty. Invalid ticket
+dialog. First column contains three tickets (in order from top to bottom: \#23,
+\#24 and \#25), second column one ticket and third column is empty. Invalid ticket
 IDs in configuration are ignored and removed automatically when board state is
 saved.
 
