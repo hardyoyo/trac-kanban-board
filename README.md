@@ -24,33 +24,33 @@ Installation
 
 1. Clone the repository:
 
-    ```
+```
     $ git clone https://github.com/nokia-developer/trac-kanban-board.git trackanbanboard
-    ```
+```
 
 2. Run the setup script:
 
-    ```
+```
     $ cd trackanbanboard
     $ python setup.py install
-    ```
+```
 
 3. Enable component in Trac configuration:
 
-    ```
+```
     [components]
     trackanbanboard.* = enabled
-    ```
+```
 
 4. Create/modify wiki page and put `KanbanBoard` processor in it. Empty data
    will give an error but also the detailed usage instructions:
 
-    ```
+```
     This is wiki text:
     {{{
     #!KanbanBoard
     }}}
-    ```
+```
 
 
 Data storage
